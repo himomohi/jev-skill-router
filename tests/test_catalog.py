@@ -395,11 +395,14 @@ def test_root_aliases_do_not_duplicate_skills_or_exceed_limit(make_skill):
 
 def test_root_normalization_does_not_hide_symlink_ancestors(make_skill,tmp_path):
     directory=make_skill();root=directory.parent
-    outside=tmp_path/'outside';outside.mkdir()
+    # Keep the target in the same parent: Windows may collapse '..' before
+    # following a symlink, whereas POSIX resolves the target first. Both must
+    # still reject the original symlink component before normalizing the root.
+    target=root/'actual';target.mkdir()
     link=root/'link'
-    try:link.symlink_to(outside,target_is_directory=True)
+    try:link.symlink_to(target,target_is_directory=True)
     except OSError:pytest.skip('OS does not permit symlinks for this user')
-    alias=link/'..'/root.name
+    alias=link/'..'
     assert alias.resolve()==root.resolve()
     cat=Catalog([str(alias)])
     assert not cat.skills

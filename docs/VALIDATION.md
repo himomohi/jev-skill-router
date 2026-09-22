@@ -50,6 +50,8 @@ Provider fixtures exercise documented request/response shapes, independent verif
 
 Earlier validation also corrected a YAML description with an unquoted colon and a missing-config hook error. Regression tests cover both.
 
+The first 0.3.0 CI pass exposed a Windows-specific assumption in the new symlink-normalization regression fixture: Windows and POSIX resolved its cross-directory `..` differently before the behavior under test ran. The fixture now points to a sibling directory under the same parent, so both platforms resolve to the same intended root and still verify rejection of the original symlink component. The runtime path checks were unchanged.
+
 ## Not verified
 
 - Live Jev authentication, semantic accuracy, Korean routing quality, inference latency or actual billed cost. No live request was made during these checks.

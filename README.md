@@ -12,9 +12,9 @@ A small, local Python service reads your trusted `SKILL.md` library, asks [TypeS
 
 [![Context comparison: synthetic skill-related UTF-8 payload, not model tokens](docs/media/poster.en.png)](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.en.mp4)
 
-[English Remotion video](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.en.mp4) · [한국어 영상](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.ko.mp4) · [Remotion source and rendering](video/README.md)
+[English overview](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.en.mp4) · [한국어 영상](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.ko.mp4)
 
-> **Verified:** 72 tests pass locally and the Linux/macOS/Windows CI matrix passes. English and Korean Remotion compositions rendered successfully in GitHub Actions. Videos explain the design; they are not live product recordings. Live Jev authentication, semantic routing quality, and actual host integration remain unverified. [Full evidence](docs/VALIDATION.md).
+> **Early release:** live Jev routing quality and end-to-end use in supported clients are still being validated.
 
 ## Why another layer?
 
@@ -74,7 +74,7 @@ Prefer not to move files? Codex supports disabling local skills using `[[skills.
 | Claude pre-turn hook | Add `--hook` to Claude setup | Runs routing before each submitted user prompt; injects selected instructions |
 | Your own harness | Import `Router`, call `.route(task)` | You control exactly when selected content enters the next model request |
 
-Codex/Cursor MCP integration is **not** universal prompt interception. Claude's optional hook gives a concrete pre-turn path, but makes additional Jev calls even for prompts where nothing matches. It does not alter the host's permissions. Actual host installations remain unverified; generated configuration and hook payloads are tested locally.
+Codex/Cursor MCP integration is **not** universal prompt interception. Claude's optional hook gives a concrete pre-turn path, but makes additional Jev calls even for prompts where nothing matches. It does not alter the host's permissions.
 
 ## What happens on a request?
 
@@ -89,9 +89,7 @@ flowchart TD
     F --> H[Your agent executes with its own tools]
 ```
 
-The first stage uses `Choice` with an explicit no-match option. The second asks independent `Noul` applicability and `Score` usefulness questions with the candidate's description and instruction excerpt. Code checks applicability, usefulness and the **Score answer's confidence** before loading anything.
-
-Normal small catalogs need two logical Jev requests. Larger catalogs are sharded by both option count and serialized byte budget, so they need more. The implementation never compares Choice probabilities from unrelated shards as if they were one global distribution. It verifies each shard's shortlist against the same absolute rubric instead.
+Jev first selects candidates from skill metadata, then checks their relevance against instruction excerpts. If no candidate meets the fit and confidence thresholds, no skill is loaded. Small catalogs normally need two logical API requests; larger catalogs require more.
 
 The default returns at most **one** skill; set `max_skills` to 2 or 3 for broader tasks. Low fit, low confidence, malformed API responses, missing keys, and API failures do not silently substitute another model or keyword routing.
 
@@ -106,33 +104,30 @@ The default returns at most **one** skill; set `max_skills` to 2 or 3 for broade
 | 200 | 58,004 | 4,403 | 92.41% |
 | 500 | 141,404 | 4,403 | 96.89% |
 
-Each synthetic description is 236 characters. The selected instructions are 2,144 characters and appear on **both** sides. The router side includes its actual static MCP tool schema and bootstrap. Generic host prompts, token framing, and Jev's separate input are excluded. The baseline's existing skill-reader tool schema is also omitted, conservatively.
-
 **Five skills are worse, not better:** the extra interface outweighs a tiny inventory. The benefit grows with catalog size and description length. Large conversation histories, large selected bodies, already-deferred discovery, and repeated MCP calls change the overall result. Cached metadata can also be cheap; less context does not guarantee a smaller bill or faster task completion.
 
-Reproduce the committed table, or measure your real library without calling any model:
+Measure your own library without making an API call:
 
 ```bash
-python scripts/benchmark_context.py
 jev-skills benchmark
 jev-skills benchmark --skill python-debug
 ```
 
-[Raw numbers and assumptions](docs/benchmark.json) · [Method, costs and limitations](docs/BENCHMARKS.md)
+[Comparison method and limitations](docs/BENCHMARKS.md)
 
-## A tiny tool surface
+## Use it
 
-The MCP server exposes only `skill_router`:
+After connecting your client, start a new session and ask it to use the skill router for your task, for example:
 
-```json
-{"action":"route","task":"Review this SQL join for accidental row multiplication"}
+> Use the skill router to find guidance for debugging this Python traceback.
+
+You can also check skill selection from your terminal:
+
+```bash
+jev-skills route "Debug a Python traceback and failing tests"
 ```
 
-The result includes selected content, confidence/fit values, model version, logical API calls, API-reported usage when available, and pagination. Follow a selected skill's local reference:
-
-```json
-{"action":"read","skill_id":"ID_FROM_ROUTE","path":"references/checklist.md","offset":0}
-```
+The router returns selected instructions and relevant local references for your agent to use. [Tool interface](docs/ARCHITECTURE.md).
 
 The router does **not** execute scripts, install arbitrary packages, modify application data, or grant permissions. Skills are read-only guidance; the agent's existing executor performs authorized actions. Reads are confined to trusted skill directories, block traversal and symlinks, and accept bounded UTF-8 text. This is not a sandbox for hostile local files or untrusted skill authors.
 
@@ -142,38 +137,4 @@ One external library can serve several local harnesses. Descriptions are read in
 
 Configuration is local JSON, keys stay out of that JSON, and the provider endpoint is fixed to TypeSafe HTTPS. Live requests disclose focused task text, skill descriptions, and shortlisted excerpts to TypeSafe. Do not register confidential material without permission. [Security](SECURITY.md).
 
-## Research, not borrowed performance claims
-
-The official [TypeSafe skill-suggestion cookbook](https://docs.typesafe.ai/cookbooks/skill_suggestion) supports the two-stage pattern. Its published experiment keeps the main agent's **existing roster** and adds a suggestion; it is not a measurement of this project's context removal. We do not reuse its error rates as our own. Our stricter gating, sharding and inventory removal need a separate live evaluation.
-
-A six-case English/Korean starter corpus and an opt-in live evaluator are included:
-
-```bash
-python scripts/evaluate_live.py examples/evaluation.jsonl --allow-live
-```
-
-This sends data to TypeSafe and incurs API usage. Expand the small starter set with real ambiguous and no-match cases before tuning thresholds. [Research notes](docs/RESEARCH.md).
-
-## Develop, render, publish
-
-```bash
-python -m pip install '.[dev]'
-python -m pytest -q
-
-cd video
-npm ci
-npm run typecheck
-npm run render
-```
-
-The Remotion project includes a verified dependency lockfile. Use `npm ci` for reproducible installation; dependency-backed TypeScript checking and both language renders passed in GitHub Actions. See [video instructions](video/README.md) for renderer boundaries and the manual-only GitHub Actions render job.
-
-To create a **new** repository and upload included MP4s as release assets, review the bundle, install Git + GitHub CLI, sign in with `gh auth login`, configure your Git author identity, then run:
-
-```bash
-python scripts/publish_github.py --public --release
-```
-
-It creates `<your-authenticated-login>/jev-skill-router`, commits the reviewed source, pushes it, and publishes a `v0.1.0` release. It refuses an existing repository or remote and never force-pushes. This project is published at [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router); the helper is for creating a separate new repository. [Publishing details](docs/PUBLISHING.md).
-
-[Installation](docs/INSTALLATION.md) · [Architecture](docs/ARCHITECTURE.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
+[Installation and recovery](docs/INSTALLATION.md) · [Security](SECURITY.md) · [MIT license](LICENSE)

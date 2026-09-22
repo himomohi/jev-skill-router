@@ -12,9 +12,9 @@
 
 [![합성 스킬 데이터의 UTF-8 바이트 비교: 실제 모델 토큰 수가 아닙니다](docs/media/poster.ko.png)](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.ko.mp4)
 
-[한국어 영상](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.ko.mp4) · [English video](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.en.mp4) · [Remotion 소스와 렌더링](video/README.md)
+[한국어 영상](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.ko.mp4) · [English video](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.en.mp4)
 
-> **검증 완료:** 로컬 테스트 72개와 Linux·macOS·Windows CI를 통과했습니다. 영어·한국어 Remotion 영상도 GitHub Actions에서 렌더링했습니다. 영상은 설계 설명용이며 실제 제품 사용 녹화는 아닙니다. 실제 Jev 인증·선택 품질·사용자 하네스 연동은 아직 검증하지 않았습니다. [검증 기록](docs/VALIDATION.md).
+> **초기 버전:** 실제 Jev의 스킬 선택 품질과 각 클라이언트에서의 전체 사용 흐름은 아직 검증 중입니다.
 
 ## 무엇이 달라지나요?
 
@@ -74,7 +74,7 @@ jev-skills park ~/.agents/skills --apply
 | Claude 자동 사전 판단 | 위 Claude 설정에 `--hook` 추가 | 사용자 프롬프트 제출 전에 라우팅하고 선택된 지침 주입 |
 | 직접 만든 하네스 | `Router.route(task)` 사용 | 모델 요청 직전에 어떤 지침을 넣을지 직접 제어 |
 
-Codex·Cursor 연결은 모든 프롬프트를 강제 가로채는 기능이 아닙니다. Claude의 선택형 훅은 실제 사전 호출 경로를 제공하지만, 관련 스킬이 없는 요청에도 Jev 호출이 발생할 수 있습니다. 실제 사용자 프로그램 설치는 아직 검증하지 않았으며 설정 생성과 프로토콜 응답을 로컬에서 검사했습니다.
+Codex·Cursor 연결은 모든 프롬프트를 강제 가로채는 기능이 아닙니다. Claude의 선택형 훅은 실제 사전 호출 경로를 제공하지만, 관련 스킬이 없는 요청에도 Jev 호출이 발생할 수 있습니다.
 
 ## 선택 과정
 
@@ -89,9 +89,7 @@ flowchart TD
     F --> H[기존 에이전트가 승인 범위 안에서 실행]
 ```
 
-1차에서는 `Choice`로 후보를 고르고, 2차에서는 후보의 설명·본문 일부를 각각 독립된 `Noul`과 `Score` 질문으로 평가합니다. 코드가 적합도, 유용성, **Score 응답의 confidence**를 확인한 뒤 로딩합니다.
-
-작은 목록은 일반적으로 논리적 API 요청 2회가 필요합니다. 큰 목록은 선택지 수와 직렬화된 바이트 예산에 따라 분할하므로 호출이 늘어납니다. 서로 다른 후보 묶음의 Choice 확률을 하나의 공통 확률처럼 비교하지 않습니다.
+Jev가 스킬 설명으로 후보를 고른 뒤, 지침 일부를 읽고 작업에 맞는지 재확인합니다. 적합도와 신뢰도 기준을 통과한 후보가 없으면 스킬을 불러오지 않습니다. 작은 목록은 일반적으로 API 요청 2회가 필요하고, 큰 목록은 분할 처리하므로 호출이 늘어납니다.
 
 기본값은 최대 1개이며, 복합 작업은 `max_skills`를 2~3으로 조정할 수 있습니다. 키 누락, API 실패, 낮은 적합도·신뢰도가 발생해도 다른 모델이나 키워드 판단으로 몰래 대체하지 않습니다.
 
@@ -106,32 +104,29 @@ flowchart TD
 | 200 | 58,004 | 4,403 | 92.41% |
 | 500 | 141,404 | 4,403 | 96.89% |
 
-합성 설명은 각각 236자, 선택된 본문은 2,144자입니다. 동일한 선택 본문을 양쪽에 넣었으며, 라우터 쪽에는 실제 MCP 스키마와 안내문, 호출·응답 부가 정보도 포함했습니다. 하네스 공통 지침, 실제 토큰 구분 형식, Jev 입력은 제외했습니다. 기존 방식의 스킬 읽기 도구 스키마도 제외한 보수적 비교입니다.
-
 **스킬이 5개면 오히려 16% 늘어납니다.** 인터페이스를 추가하는 비용이 작은 목록보다 크기 때문입니다. 목록이 많고 설명이 길수록 유리하며, 이미 목록을 지연 검색하는 하네스나 대화·선택 본문이 큰 경우 전체 절감률은 달라집니다. 캐시된 목록의 비용이 낮을 수도 있어, 컨텍스트 감소가 비용·속도 개선을 보장하지는 않습니다.
 
 ```bash
-# README 표 재현: 모델 호출 없음
-python scripts/benchmark_context.py
-
 # 내 라이브러리의 실제 파일로 계산: 모델 호출 없음
 jev-skills benchmark
 jev-skills benchmark --skill python-debug
 ```
 
-[원본 수치](docs/benchmark.json) · [비교 방법과 한계](docs/BENCHMARKS.md)
+[비교 방법과 한계](docs/BENCHMARKS.md)
 
-## 도구는 하나만 노출합니다
+## 사용하기
 
-```json
-{"action":"route","task":"SQL 조인 때문에 집계 행이 중복되는지 검토해줘"}
+클라이언트를 연결한 뒤 **새 세션**에서 스킬 라우터를 사용하도록 요청하세요.
+
+> 스킬 라우터로 이 Python 오류를 디버깅할 지침을 찾아줘.
+
+터미널에서도 스킬 선택 결과를 확인할 수 있습니다.
+
+```bash
+jev-skills route "Python 오류와 실패한 테스트를 디버깅해줘"
 ```
 
-결과에는 선택된 지침, 적합도·신뢰도, 실제 응답 모델명, 논리적 호출 수, API가 제공한 사용량, 다음 읽기 위치가 포함됩니다. 참조 문서는 반환된 ID로 읽습니다.
-
-```json
-{"action":"read","skill_id":"ID_FROM_ROUTE","path":"references/checklist.md","offset":0}
-```
+라우터가 선택된 지침과 관련 로컬 참조 문서를 반환하면, 에이전트가 이를 참고해 작업합니다. [도구 인터페이스](docs/ARCHITECTURE.md).
 
 이 서버는 스크립트를 실행하거나 권한을 부여하지 않습니다. 기존 에이전트가 자신의 도구로 실제 작업을 수행합니다. 파일 읽기는 등록한 스킬 폴더 내부의 제한된 UTF-8 텍스트만 허용하고 상위 경로 접근·심볼릭 링크 등을 차단합니다. 악성 로컬 파일이나 신뢰할 수 없는 스킬 작성자를 완전히 격리하는 샌드박스는 아닙니다.
 
@@ -141,36 +136,4 @@ jev-skills benchmark --skill python-debug
 
 키는 설정 JSON에 저장하지 않습니다. 단, 라이브 라우팅은 작업 설명, 스킬 설명, 후보 본문 일부를 TypeSafe로 전송합니다. 사내 기밀이나 비밀값을 넣지 마세요. [보안 범위](SECURITY.md).
 
-공식 [TypeSafe 스킬 선택 예제](https://docs.typesafe.ai/cookbooks/skill_suggestion)는 2단계 판단의 근거로 참고했습니다. 그 예제는 기존 목록을 유지하고 추천만 추가하므로, 그 정확도 수치를 이 프로젝트의 성능이나 컨텍스트 절감 결과로 가져오지 않았습니다.
-
-영어·한국어 초기 평가 사례와 실제 API 평가 도구도 포함했습니다.
-
-```bash
-python scripts/evaluate_live.py examples/evaluation.jsonl --allow-live
-```
-
-실제 데이터 전송과 API 사용량이 발생합니다. 기본 사례 6개만으로 품질을 판단하지 말고, 실제 업무의 애매한 요청·해당 없는 요청을 추가해 임계값을 검증하세요. [리서치](docs/RESEARCH.md).
-
-## 테스트 · 영상 렌더링 · GitHub 게시
-
-```bash
-python -m pip install '.[dev]'
-python -m pytest -q
-
-cd video
-npm ci
-npm run typecheck
-npm run render
-```
-
-Remotion 직접·간접 의존성을 잠금 파일로 고정했습니다. `npm ci`로 동일한 의존성을 설치할 수 있으며, GitHub Actions에서 TypeScript 검사와 영어·한국어 렌더링을 통과했습니다. [영상 안내](video/README.md).
-
-Git과 GitHub CLI를 설치하고 `gh auth login`, Git 작성자 설정, 소스 검토를 마친 뒤 저장소 루트에서 실행하면 **새 저장소 생성·푸시·포함된 MP4 릴리스 첨부**를 진행합니다.
-
-```bash
-python scripts/publish_github.py --public --release
-```
-
-대상은 `<로그인한 계정>/jev-skill-router`입니다. 기존 저장소나 리모트가 있으면 중단하며 강제 푸시하지 않습니다. 현재 프로젝트는 [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router)에 게시되어 있습니다. 위 도우미는 별도의 새 저장소를 만들 때 사용합니다. [게시 절차](docs/PUBLISHING.md).
-
-[설치](docs/INSTALLATION.md) · [구조](docs/ARCHITECTURE.md) · [검증](docs/VALIDATION.md) · [MIT 라이선스](LICENSE)
+[설치·복구 안내](docs/INSTALLATION.md) · [보안](SECURITY.md) · [MIT 라이선스](LICENSE)

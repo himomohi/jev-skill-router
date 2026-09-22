@@ -1,6 +1,6 @@
 # Quality and release gates
 
-Version 0.4.0 improves verifiable engineering quality. This checklist does not assign a self-certified 90/100 score: independent users may weigh quality differently, and live model/task evidence is still missing.
+Version 0.4.1 includes the 0.4.0 improvements and corrects draft publication. This improves verifiable engineering quality. This checklist does not assign a self-certified 90/100 score: independent users may weigh quality differently, and live model/task evidence is still missing.
 
 | Area | Evidence delivered | Remaining verification |
 | --- | --- | --- |

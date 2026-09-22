@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jev-skill-router"
-version = "0.4.0"
+version = "0.4.1"
 description = "Keep your skill catalog outside the main LLM context. Let Jev select what to load."
 readme = "README.md"
 requires-python = ">=3.11"

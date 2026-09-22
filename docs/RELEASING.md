@@ -81,3 +81,5 @@ uses `--clobber`.
 
 This pipeline validates packaging and release provenance. It does not establish
 live Jev accuracy, billed cost savings or real host task success.
+
+Draft discovery uses the authenticated, paginated release list and a fresh numeric-ID lookup. GitHub's [release-by-tag endpoint](https://docs.github.com/en/rest/releases/releases#get-a-release-by-tag-name) returns **published** releases only, while [list releases](https://docs.github.com/en/rest/releases/releases#list-releases) includes drafts for accounts with push access. Duplicate or changed matches stop publication.

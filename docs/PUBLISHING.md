@@ -2,7 +2,7 @@
 
 The public repository is [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router). [v0.1.0](https://github.com/himomohi/jev-skill-router/releases/tag/v0.1.0) provides the source ZIP and English/Korean Remotion MP4s. Updates are committed directly to `main`.
 
-Version 0.4.0 materials: [English update guide](updates/v0.4.0.md), [한국어 업데이트 안내](updates/v0.4.0.ko.md), [English changelog](../CHANGELOG.md), [한국어 변경 이력](../CHANGELOG.ko.md).
+Version 0.4.1 materials: [English update guide](updates/v0.4.1.md), [한국어 업데이트 안내](updates/v0.4.1.ko.md), [English changelog](../CHANGELOG.md), [한국어 변경 이력](../CHANGELOG.ko.md).
 
 Updates to this existing repository use the [tested-version release workflow](RELEASING.md). After a successful Tests run for a main push, it publishes matching wheel, sdist, source ZIP and checksums at the exact tested SHA. PyPI publication is not configured. The initial-repository helper below is a separate manual workflow; it does not update this repository or provide that CI gate.
 

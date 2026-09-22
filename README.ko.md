@@ -2,7 +2,7 @@
 
 # Jev Skill Router
 
-**0.4.0 업데이트:** [주요 변경과 기존 사용자 적용 방법](docs/updates/v0.4.0.ko.md) · [변경 이력](CHANGELOG.ko.md)
+**0.4.1 업데이트:** [주요 변경과 기존 사용자 적용 방법](docs/updates/v0.4.1.ko.md) · [변경 이력](CHANGELOG.ko.md)
 
 MCP 요청 취소, 선택형 대규모 검색, 설정 보존 업데이트와 테스트 버전 배포를 추가했습니다. [96개 사례 비교](docs/COMPARATIVE_EVALUATION.md) · [대규모 처리와 후보 누락](docs/SCALING.md) · [검증 기록](docs/VALIDATION.md). 실제 Codex/Claude 등록·연결을 통과했으며 모델을 사용한 작업 품질은 아직 측정하지 않았습니다.
 

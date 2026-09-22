@@ -219,3 +219,45 @@ def test_packaging_timestamps_do_not_break_asset_retry_checksums(tmp_path):
         assert archive.read("module.py") == b"print('same content')\n"
     with tarfile.open(fileobj=io.BytesIO(tars[0]), mode="r:gz") as archive:
         assert archive.extractfile("module.py").read() == b"same"
+
+
+def test_draft_is_found_after_tag_endpoint_404_and_refreshed_by_id(monkeypatch):
+    calls = []
+    fresh = {'id': 42, 'tag_name': 'v1.2.3', 'draft': True, 'assets': [{'name': 'SHA256SUMS'}]}
+    def transport(*args, **kwargs):
+        endpoint = args[2]
+        calls.append(endpoint)
+        if '/releases/tags/' in endpoint:
+            raise subprocess.CalledProcessError(1, args, stderr=b'gh: Not Found (HTTP 404)')
+        data = ([{'id': 42, 'tag_name': 'v1.2.3', 'draft': True, 'assets': []}]
+                if '?' in endpoint else fresh)
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(data).encode())
+    monkeypatch.setattr(release, 'run', transport)
+    assert release.GitHub('himomohi/jev-skill-router').release('v1.2.3') == fresh
+    assert calls[-1].endswith('/releases/42')
+
+
+def test_draft_discovery_checks_later_pages(monkeypatch):
+    github = release.GitHub('himomohi/jev-skill-router')
+    responses = [None, [{'tag_name': 'other'}] * 100, [{'id': 42, 'tag_name': 'v1.2.3'}],
+                 {'id': 42, 'tag_name': 'v1.2.3', 'assets': []}]
+    calls = []
+    def api(path):
+        calls.append(path)
+        return responses.pop(0)
+    monkeypatch.setattr(github, 'api', api)
+    assert github.release('v1.2.3')['id'] == 42
+    assert 'releases?per_page=100&page=2' in calls
+
+
+@pytest.mark.parametrize('entries,detail', [
+    ([{'id': 1, 'tag_name': 'v1.2.3'}, {'id': 2, 'tag_name': 'v1.2.3'}], None),
+    (None, None),
+    ([{'id': 1, 'tag_name': 'v1.2.3'}], {'id': 1, 'tag_name': 'changed'}),
+])
+def test_ambiguous_unreadable_or_changed_draft_stops_publication(monkeypatch, entries, detail):
+    github = release.GitHub('himomohi/jev-skill-router')
+    replies = [None, entries, detail]
+    monkeypatch.setattr(github, 'api', lambda *args: replies.pop(0))
+    with pytest.raises(ValueError):
+        github.release('v1.2.3')

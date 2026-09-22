@@ -114,7 +114,32 @@ class GitHub:
         raise ValueError("Existing version tag does not resolve to a commit")
 
     def release(self, tag: str):
-        return self.api(f"releases/tags/{tag}")
+        # The tag endpoint returns published releases only. Drafts must be
+        # discovered through the authenticated list and refreshed by numeric ID.
+        published = self.api(f"releases/tags/{tag}")
+        if published is not None:
+            return published
+        matches = []
+        for page in range(1, 11):
+            entries = self.api(f"releases?per_page=100&page={page}")
+            if not isinstance(entries, list):
+                raise ValueError("Could not inspect draft releases")
+            matches.extend(item for item in entries if isinstance(item, dict) and item.get('tag_name') == tag)
+            if len(entries) < 100:
+                break
+        else:
+            raise ValueError("Release listing exceeds the supported discovery bound")
+        if len(matches) > 1:
+            raise ValueError("Multiple releases use this tag; manual review required")
+        if not matches:
+            return None
+        identifier = matches[0].get('id')
+        if type(identifier) is not int or identifier <= 0:
+            raise ValueError("Invalid draft release identifier")
+        release = self.api(f"releases/{identifier}")
+        if not isinstance(release, dict) or release.get('tag_name') != tag:
+            raise ValueError("Draft release changed during inspection")
+        return release
 
     def create_tag(self, tag: str, sha: str) -> None:
         self.api("git/refs", {"ref": f"refs/tags/{tag}", "sha": sha})

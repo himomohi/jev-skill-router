@@ -10,7 +10,7 @@ A small, local Python service reads your trusted `SKILL.md` library, asks [TypeS
 
 **Python 3.11+ · Claude Code / Codex / Cursor adapters · English + Korean docs · MIT**
 
-**0.4.0 update:** [What's changed and how to upgrade](docs/updates/v0.4.0.md) · [Changelog](CHANGELOG.md)
+**0.4.1 update:** [What's changed and how to upgrade](docs/updates/v0.4.1.md) · [Changelog](CHANGELOG.md)
 
 MCP cancellation, explicit large-catalog retrieval, configuration-preserving upgrades and tested-version release assets are now included. [96-case comparison](docs/COMPARATIVE_EVALUATION.md) · [Scale and recall tradeoffs](docs/SCALING.md) · [Validation](docs/VALIDATION.md). Real Codex/Claude registration and MCP connections passed; live model task quality remains unmeasured.
 

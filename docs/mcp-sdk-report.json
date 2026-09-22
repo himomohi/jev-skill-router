@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "created_utc": "2026-09-22T16:19:23.459043+00:00",
+  "created_utc": "2026-09-22T16:24:40.459808+00:00",
   "success": true,
   "client": "official-modelcontextprotocol-python-sdk",
   "sdk_version": "1.30.0",
   "transport": "stdio-subprocess",
   "protocol_version": "2025-06-18",
-  "server_version": "0.4.0",
+  "server_version": "0.4.1",
   "python_version": "3.12.14",
-  "elapsed_seconds": 0.409593,
+  "elapsed_seconds": 0.44306,
   "checks": [
     "initialize",
     "server_instructions",

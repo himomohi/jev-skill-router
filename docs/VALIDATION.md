@@ -1,14 +1,14 @@
 # Validation record — 2026-09-22
 
-Version **0.4.0**. This records engineering checks and measured scope; it is not production certification, a self-certified 90/100 score or a live Jev quality claim.
+Version **0.4.1**. This records engineering checks and measured scope; it is not production certification, a self-certified 90/100 score or a live Jev quality claim.
 
 ## Current local results
 
-- **284 tests passed, 2 Windows-only tests skipped**, Linux / Python 3.12.14, 12.29 seconds. The official MCP SDK test ran rather than skipping. Provider unit-test responses remain fixtures.
+- **289 tests passed, 2 Windows-only tests skipped**, Linux / Python 3.12.14. The official MCP SDK test ran rather than skipping. Provider unit-test responses remain fixtures.
 - Cancellation checks cover active and queued HTTP, retry waits, streamed responses, pre-cancelled routes, responsive ping, continued routing after cancellation, bounded queues, EOF cleanup and no caching of cancelled results.
 - Retrieval checks cover default full-catalog behavior, smaller catalogs, Unicode/CJK normalization, excluded body-only terms, cutoff ties, metadata edit invalidation, API-free empty retrieval, verification gates, ephemeral CLI overrides and the 4,096-skill budget boundary.
 - Upgrade checks cover preserved configuration, mode, roots, client registration and launchers, mismatched installed versions and idempotent/conflicting host registration. Actual isolated upgrade evidence is recorded separately below.
-- Release checks cover trusted-event gating, version drift, immutable tags/assets, partial draft recovery, mismatched bytes, network/authentication failures and deterministic ZIP/tar timestamps. `build_release.py check` passes for 0.4.0.
+- Release checks cover trusted-event gating, version drift, immutable tags/assets, partial draft recovery, mismatched bytes, network/authentication failures and deterministic ZIP/tar timestamps. `build_release.py check` passes for 0.4.1.
 - Existing regression coverage retains safe path/read boundaries, revision-bound pagination, malformed MCP/provider responses, shared request/deadline budgets, accounting, catalog cache invalidation, sharding, confidence/fit gates and no silent offline fallback.
 
 ## Actual protocol and host connection checks
@@ -29,13 +29,15 @@ Version **0.4.0**. This records engineering checks and measured scope; it is not
 - [Synthetic scale report](scaling-benchmark.json): full-catalog base request bounds are 4/7/28/58 for 200/500/2,000/4,096 skills. Indexed limit 64 gives 2 in all four scenarios. The default 32-attempt cap blocks the 58-request plan before spending. These are bounds, not live latency/cost observations.
 - [Context accounting](benchmark.json): 200 synthetic skills use 58,088 → 4,940 UTF-8 bytes (91.50% reduction). Five skills increase modeled context by 27.28%. This is one skill-related context with the same selected body, not total conversation tokens or savings.
 
+Host connection reports above were captured for 0.4.0; the 0.4.1 patch changes publishing logic and package version, with the same routing/host integration code.
+
 ## Actual upgrade check
 
 An isolated guided installation of 0.3.0 was upgraded using the new `Install.py --upgrade --non-interactive --no-keychain`. The installation succeeded, config bytes were unchanged, offline mode and all six example skills remained, and the bound launcher returned `jev-skills 0.4.0`. [Raw result](upgrade-report.json). No model/API request or real keychain access occurred.
 
 ## Cross-platform CI and release
 
-The updated Tests workflow requires Ubuntu Python 3.11/3.13, macOS Python 3.12 and Windows Python 3.12, includes the official MCP SDK check, and gates version metadata. The Release workflow accepts only a successful main push's exact tested SHA. Current 0.4.0 run and publication results will be recorded after the push.
+The updated Tests workflow requires Ubuntu Python 3.11/3.13, macOS Python 3.12 and Windows Python 3.12, includes the official MCP SDK check, and gates version metadata. The Release workflow accepts only a successful main push's exact tested SHA. [v0.4.0 CI run 35753374736](https://github.com/himomohi/jev-skill-router/actions/runs/35753374736) passed all four jobs for `757ffdf`: Windows 286 passed; other jobs 284 passed with two Windows-only skips. The release uploaded all four assets but remained a draft because the published-tag endpoint cannot find drafts. Version 0.4.1 adds authenticated draft discovery, fresh numeric-ID lookup and five regression cases. Its current CI/publication outcome will be recorded after the push.
 
 Historical [v0.3.0 CI run 35737405992](https://github.com/himomohi/jev-skill-router/actions/runs/35737405992) passed for [`f1e0607`](https://github.com/himomohi/jev-skill-router/commit/f1e0607d98ccacf700e198ce71e75bc27c60179e): Windows 201 passed; the other three jobs 199 passed with two Windows-only skips. These earlier results do not substitute for the current version's CI.
 
@@ -66,7 +68,7 @@ The host checks require the corresponding actual CLI on PATH and use disposable 
 
 ## 한국어 요약
 
-현재 로컬 테스트 284개를 통과했고 Windows 전용 2개는 해당 CI 환경에서 검증합니다. 공식 MCP SDK 왕복과 실제 Codex·Claude 등록/연결을 통과했습니다. 요청 취소, 선택형 대규모 검색, 설정 보존 업데이트, 비교 평가 및 버전 일치 배포를 보강했습니다. 96개 자체 작성 사례의 로컬 기준선 결과와 후보 누락도 함께 공개합니다.
+현재 로컬 테스트 289개를 통과했고 Windows 전용 2개는 해당 CI 환경에서 검증합니다. 공식 MCP SDK 왕복과 실제 Codex·Claude 등록/연결을 통과했습니다. 요청 취소, 선택형 대규모 검색, 설정 보존 업데이트, 비교 평가 및 버전 일치 배포를 보강했습니다. 96개 자체 작성 사례의 로컬 기준선 결과와 후보 누락도 함께 공개합니다.
 
 실제 Jev 판단·요금·지연, 모델을 사용한 하네스 작업 성공률, Cursor UI와 OS 키체인은 아직 미검증입니다. 이 한계를 숨기고 90점이나 90% 정확도로 표시하지 않습니다.
 

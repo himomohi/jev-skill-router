@@ -2,6 +2,14 @@
 
 [English](CHANGELOG.md) | [한국어](CHANGELOG.ko.md)
 
+## 0.4.1 — 2026-09-22
+
+[Update notes](docs/updates/v0.4.1.md) · [한국어](docs/updates/v0.4.1.ko.md)
+
+- Fix release draft discovery: GitHub's tag endpoint returns published releases only. Inspect authenticated, paginated release listings and refresh the matching draft by numeric ID before verifying its assets.
+- Reject duplicate, unreadable or changed draft records. Preserve existing tags/assets and resume only matching bytes.
+- The 0.4.0 feature set passed all four CI jobs (Windows: 286 tests; others: 284 plus two Windows-only skips). Its first automatic release retained a draft after this publishing error; 0.4.1 is the corrected publication version. The existing 0.4.0 tag/draft was not moved, deleted or overwritten.
+
 ## 0.4.0 — 2026-09-22
 
 [Update notes and upgrade instructions](docs/updates/v0.4.0.md) · [한국어 업데이트 안내](docs/updates/v0.4.0.ko.md)

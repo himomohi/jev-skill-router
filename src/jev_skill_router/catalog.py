@@ -2,6 +2,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import stat
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 import yaml
@@ -10,6 +11,9 @@ from .config import RouterError
 MAX_FILE_BYTES=512_000
 TEXT_SUFFIXES={".md",".txt",".py",".js",".mjs",".cjs",".ts",".tsx",".jsx",".json",".yaml",".yml",".toml",".sh",".ps1",".html",".css",".csv",".sql",".r",".rs",".go",".swift"}
 BLOCKED_NAMES={"credentials.json","secrets.json","secrets.yaml","id_rsa","id_ed25519","token.json"}
+# Windows stat ctime can be a creation time, not a metadata-change time.
+# Conservatively re-read there so restored mtimes cannot hide in-place edits.
+STAT_CACHE_SUPPORTED=os.name!='nt'
 
 @dataclass(frozen=True)
 class Skill:
@@ -29,6 +33,8 @@ class Catalog:
         self.limit=limit
         self.skills: dict[str,Skill]={}
         self.warnings: list[str]=[]
+        self._file_cache: dict[Path,tuple[tuple[int,...],Skill]]={}
+        self.refresh_stats: dict[str,int]={}
         self.refresh()
 
     @staticmethod
@@ -50,8 +56,29 @@ class Catalog:
         except (UnicodeError,ValueError,OSError) as e:
             raise RouterError("Only bounded UTF-8 text files are supported") from e
 
-    def refresh(self) -> None:
-        skills={};warnings=[];seen=set()
+    @staticmethod
+    def _file_stamp(path: Path) -> tuple[int,...]:
+        # Check the whole path even on a cache hit: a previously safe directory
+        # may since have been replaced by a symbolic link.
+        Catalog._no_symlinks(path)
+        info=path.stat(follow_symlinks=False)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_FILE_BYTES:
+            raise RouterError("Skill file is missing or exceeds 512 KB")
+        return (info.st_dev,info.st_ino,info.st_mode,info.st_size,
+                info.st_mtime_ns,info.st_ctime_ns)
+
+    def refresh(self, *, force: bool = False) -> None:
+        """Rescan paths and reuse unchanged parsed files, without a TTL.
+
+        Identity, size, mode and nanosecond modification/change timestamps are
+        checked on each scan. ``force=True`` re-reads and hashes every file for
+        filesystems whose metadata cannot reliably expose content changes. The
+        optimization is disabled on Windows, where stat ctime may be creation
+        time. This is not protection against hostile metadata spoofing. The read
+        tool always reads the current file, independently of this cache.
+        """
+        skills={};warnings=[];seen=set();file_cache={}
+        stats={'files_seen':0,'files_reused':0,'files_reloaded':0}
         for root in self.roots:
             try:
                 self._no_symlinks(root)
@@ -65,8 +92,22 @@ class Catalog:
                 file=here/'SKILL.md'
                 if file.absolute() in seen: continue
                 seen.add(file.absolute())
+                stats['files_seen']+=1
                 try:
+                    stamp=self._file_stamp(file)
+                    cached=self._file_cache.get(file.absolute())
+                    # An absent inode cannot reliably identify replacements.
+                    if STAT_CACHE_SUPPORTED and not force and stamp[1] and cached and cached[0]==stamp:
+                        skill=cached[1]
+                        skills[skill.id]=skill
+                        file_cache[file.absolute()]=cached
+                        stats['files_reused']+=1
+                        if len(skills)>self.limit: raise RouterError("Catalog exceeds configured max_catalog_skills")
+                        continue
+                    stats['files_reloaded']+=1
                     text=self._text(file)
+                    if self._file_stamp(file)!=stamp:
+                        raise RouterError("Skill file changed while being read; retry refresh")
                     lines=text.splitlines()
                     if not lines or lines[0].strip()!='---': raise RouterError("missing YAML frontmatter")
                     end=next((i for i,s in enumerate(lines[1:],1) if s.strip()=='---'),None)
@@ -78,13 +119,17 @@ class Catalog:
                     if not isinstance(description,str) or not 1<=len(description)<=1024: raise RouterError("invalid description")
                     sid='s_'+hashlib.sha256(str(file.absolute()).encode()).hexdigest()[:16]
                     body='\n'.join(lines[end+1:]).strip()
-                    skills[sid]=Skill(sid,name,description.strip(),here.absolute(),file.absolute(),body,hashlib.sha256(text.encode()).hexdigest())
+                    skill=Skill(sid,name,description.strip(),here.absolute(),file.absolute(),body,hashlib.sha256(text.encode()).hexdigest())
+                    skills[sid]=skill
+                    file_cache[file.absolute()]=(stamp,skill)
                     if len(skills)>self.limit: raise RouterError("Catalog exceeds configured max_catalog_skills")
                 except (RouterError,yaml.YAMLError,OSError,RecursionError) as e:
                     if len(skills)>self.limit: raise RouterError("Catalog exceeds configured max_catalog_skills") from e
                     warnings.append(f"{file}: invalid or unsupported skill ({type(e).__name__})")
         self.skills=dict(sorted(skills.items(),key=lambda x:(x[1].name,str(x[1].source))))
         self.warnings=warnings
+        self._file_cache=file_cache
+        self.refresh_stats=stats
         self.fingerprint=hashlib.sha256(json.dumps([(s.id,s.digest) for s in self.skills.values()]).encode()).hexdigest()
 
     def read(self, skill_id: str, path: str = 'SKILL.md', offset: int = 0, limit: int = 12000) -> dict:

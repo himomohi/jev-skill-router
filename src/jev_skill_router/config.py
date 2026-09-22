@@ -41,8 +41,10 @@ class Config:
     max_output_chars: int = 12000
     max_request_bytes: int = 24000
     max_api_calls: int = 32
+    max_concurrency: int = 3
     max_catalog_skills: int = 4096
     timeout_seconds: float = 15.0
+    route_timeout_seconds: float = 45.0
     retries: int = 2
     cache_seconds: int = 180
     def validate(self) -> Config:
@@ -53,13 +55,13 @@ class Config:
         for key, lo, hi in [
             ("max_skills",1,3),("shortlist",1,8),("excerpt_chars",100,2000),
             ("max_output_chars",1000,50000),("max_request_bytes",8000,24000),
-            ("max_api_calls",2,64),("max_catalog_skills",1,10000),
+            ("max_api_calls",2,64),("max_concurrency",1,8),("max_catalog_skills",1,10000),
             ("retries",0,3),("cache_seconds",0,600),
         ]:
             value = getattr(self,key)
             if type(value) is not int or not lo <= value <= hi:
                 raise RouterError(f"{key} must be an integer from {lo} to {hi}")
-        for key,lo,hi in [("min_fit",0.0,1.0),("min_confidence",0.0,1.0),("timeout_seconds",1.0,60.0)]:
+        for key,lo,hi in [("min_fit",0.0,1.0),("min_confidence",0.0,1.0),("timeout_seconds",1.0,60.0),("route_timeout_seconds",1.0,180.0)]:
             value=getattr(self,key)
             if type(value) not in (int,float) or not lo <= value <= hi:
                 raise RouterError(f"{key} is outside the supported range")

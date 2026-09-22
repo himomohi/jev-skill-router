@@ -16,7 +16,7 @@ The table represents one skill-related context after selection, not cumulative i
 
 ## Why bytes, not tokens?
 
-The target main-model tokenizer was not specified, and a tokenizer package could not be downloaded in the build environment. Consequently the committed evidence reports **exact UTF-8 bytes only**. Byte reduction is not automatically token reduction, particularly with mixed Korean/English text.
+The target main-model tokenizer was not specified. The committed comparison therefore reports **exact UTF-8 bytes only**. Byte reduction is not automatically token reduction, particularly with mixed Korean/English text.
 
 For a tokenizer-specific estimate, install the optional `tokens` extra and run:
 
@@ -43,8 +43,16 @@ Routing is not free and does not erase instructions already present in the conve
 
 ## Latency, quality and live evaluation
 
-No live model latency, cost, authentication, or semantic accuracy was measured. `api_calls` counts logical successful-path attempts to `ask`; HTTP retries can create additional provider requests. `routing_seconds` measures a noncached route's local elapsed selection time; cached results retain the original value and mark `cache_hit=true`, so it is not the cache-hit latency.
+No live model latency, cost, authentication, or semantic accuracy was measured. `api_calls` counts logical successful-path calls; `http_requests` counts actual transport attempts including retries. Retries now consume `max_api_calls` rather than sitting outside that limit. `routing_seconds` and `elapsed_seconds` are fresh measurements on every call, including cache hits. The latter includes catalog refresh and selected-file reading. `original_routing_seconds` identifies the original decision time on a cache hit.
 
-`evaluate_live.py` measures request wall-clock time, exact selected-name match, errors, resolved model versions and reported usage. Its labels need human review. Its six starter cases are not a representative benchmark. It does not evaluate whether the final host completed the user's task successfully.
+`evaluate_live.py` preflights without a key by default. Explicit live mode measures 24 authored EN/KO starter cases, exact selection sets, errors, abstentions, fresh cold/warm latency, physical HTTP requests, model versions and usage completeness. It stops on a provider/budget error and reports attempted versus unattempted cases. No built-in prices are assumed. Its labels need human review, and it does not evaluate final host-task success. See [evaluation and compatible-run comparison](EVALUATION.md).
 
 For a reliable comparison, evaluate metadata-only native routing, this router, and a manually supplied correct skill across the same realistic EN/KO tasks. Include no-match, ambiguous, multi-skill, long-body and unavailable-dependency cases. Record every error and abstention rather than dropping them. Separate cold/warm sessions and compare full task success, total billed usage and end-to-end wall time.
+
+## Local filesystem measurement
+
+`python scripts/benchmark_runtime.py --synthetic-skills 200` compares a forced full refresh against incremental reuse in the current implementation, without an API call. Use `--root PATH` to measure a trusted local catalog instead.
+
+The recorded Linux/Python 3.12 run used 200 synthetic local files and five alternating repetitions per mode: median **140.927 ms** for full refresh and **15.169 ms** for incremental refresh; unchanged file reloads fell from **200 to 0**. [Raw samples](runtime-benchmark.json). This measures real local traversal/read/parse/hash work, not an old-release end-to-end comparison. Directory checks remain; OS caches and filesystem behavior affect results. Windows intentionally retains full reads. No Jev speed or cost claim follows from this measurement.
+
+The current illustrative envelope includes physical-request and elapsed-time fields. Its 200-skill result is **58,004 → 4,463 bytes (92.31%)**; the earlier v0.1.0 sample was 4,403 bytes (92.41%). Historical media retains the earlier illustration. Five skills now produce **17.58% more** modeled context, so small inventories should not assume a context benefit.

@@ -1,8 +1,21 @@
 # Validation record — 2026-09-22
 
-Version 0.1.0. This records implementation and artifact checks, not production certification or live Jev quality. Public repository: [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router).
+This records implementation checks, not production certification or live Jev quality. The current source includes improvements after the v0.1.0 release. Public repository: [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router).
 
-## Executed checks
+## Current source checks
+
+- **116 tests passed in 2.78 seconds**, Linux / Python 3.12.14. Provider responses remain fixtures, not real Jev answers.
+- Incremental catalog reuse covers new/deleted/edited files, restored modification times, same-path replacements, symlink changes, forced rehash, and changes during reads. Windows deliberately retains full reads.
+- Concurrent API tests verify the configured bound, preserved result order, cancellation of active/queued work on errors and deadlines, actual HTTP limits including retries, and unknown usage after failed attempts.
+- Long-body evidence tests confirm relevant late text and final constraints can be included within the existing character budget. This is coverage of the extraction algorithm, not proof of better model accuracy.
+- Evaluation tests verify no credential lookup in preflight, actual HTTP/retry counters, cold and immediate-repeat timing, error/no-match denominators, interrupted cases, report privacy, strict pricing conditions and comparable-run ingestion.
+- The evaluator preflight found **24 cases: 12 English, 12 Korean, six no-match**, over the six example skills, with **zero API calls and zero credential reads**.
+- [Local refresh measurement](runtime-benchmark.json): 200 synthetic files, five alternating runs per mode, Linux. Full-refresh median 140.927 ms; incremental median 15.169 ms; unchanged content reloads 200 → 0. This compares refresh modes of the current implementation, not live routing or total task speed.
+- The current context-accounting artifact includes new timing/request fields: 200 skills, 58,004 → 4,463 bytes (92.31%). Five skills increase the modeled payload by 17.58%.
+
+The historical CI below applies to its cited earlier commit. A new local pass does not establish that every platform has run the current source.
+
+## Historical v0.1.0 checks
 
 | Check | Observed result | Boundary |
 | --- | --- | --- |
@@ -32,7 +45,7 @@ Earlier validation also corrected a YAML description with an unquoted colon and 
 - Live Jev authentication, semantic accuracy, Korean routing quality, inference latency or actual billed cost. No TypeSafe API key was available; no live request was made.
 - Real Codex, Claude Code or Cursor installation and use. Generated configuration and local subprocess tests do not establish real host compatibility. Disable or remove native skill exposure separately and start a new session.
 - Real macOS Keychain, Windows Credential Manager or Linux Secret Service behavior. Code has no plaintext key fallback, but OS credential-store integration needs live platform testing.
-- The 92.41% comparison for 200 skills measures only synthetic skill-related UTF-8 payload (58,004 versus 4,403 bytes), not total context, tokens, cost or speed. Small catalogs can have greater overhead.
+- The current 92.31% comparison for 200 skills measures only synthetic skill-related UTF-8 payload (58,004 versus 4,463 bytes), not total context, tokens, cost or speed. The historical v0.1.0 illustration used 92.41%. Small catalogs can have greater overhead.
 
 ## Reproduce
 
@@ -40,6 +53,8 @@ Earlier validation also corrected a YAML description with an unquoted colon and 
 python -m pip install -e '.[dev]'
 python -m pytest -q
 python scripts/benchmark_context.py
+python scripts/benchmark_runtime.py --synthetic-skills 200
+python scripts/evaluate_live.py --preflight
 python Install.py --offline
 ```
 
@@ -47,6 +62,6 @@ See [video instructions](../video/README.md) for rendering and [publishing](PUBL
 
 ## 한국어 요약
 
-로컬 테스트 72개와 Linux·macOS·Windows CI를 통과했습니다. 전용 설치 프로그램, MCP·훅 프로세스, 예제 실행을 확인했고 영어·한국어 Remotion 영상을 실제 렌더링해 각 5개 장면을 검토했습니다. 공개 저장소와 v0.1.0 릴리스에서 소스와 영상을 제공합니다.
+현재 소스의 로컬 테스트 116개를 통과했습니다. 변경 없는 파일 재사용, 본문 여러 구간의 검증 근거, 동시 API 요청·시간 및 요청 한도, 실측 도구를 보완했습니다. 영어·한국어 24개 사례의 사전 점검은 키 조회와 API 호출 없이 통과했습니다. 위 Linux·macOS·Windows CI 기록은 명시된 이전 커밋의 결과입니다.
 
-실제 Jev 인증·판단 품질, 사용자 하네스 실행, 운영체제 키체인은 아직 검증하지 않았습니다. 92.41%는 합성 데이터의 스킬 관련 바이트 감소이며 실제 비용·속도 개선율이 아닙니다.
+실제 Jev 인증·판단 품질, 사용자 하네스 실행, 운영체제 키체인은 아직 검증하지 않았습니다. 현재 92.31%는 합성 데이터의 스킬 관련 바이트 감소이며 실제 비용·속도 개선율이 아닙니다. 로컬 파일 처리 개선과 모델·전체 작업 성능은 구분해야 합니다.

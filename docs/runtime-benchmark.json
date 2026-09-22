@@ -1,0 +1,86 @@
+{
+  "scope": "Local catalog refresh only; same implementation with force=True versus incremental reuse. Not an old-release or live API benchmark.",
+  "platform": "Linux",
+  "python": "3.12.14",
+  "catalog_size": 200,
+  "stat_cache_supported": true,
+  "runs_per_mode": 5,
+  "model_calls": 0,
+  "median_seconds": {
+    "full_refresh": 0.140927,
+    "incremental_refresh": 0.015169
+  },
+  "samples": {
+    "full_refresh": [
+      {
+        "seconds": 0.132111,
+        "files_seen": 200,
+        "files_reused": 0,
+        "files_reloaded": 200
+      },
+      {
+        "seconds": 0.135631,
+        "files_seen": 200,
+        "files_reused": 0,
+        "files_reloaded": 200
+      },
+      {
+        "seconds": 0.140927,
+        "files_seen": 200,
+        "files_reused": 0,
+        "files_reloaded": 200
+      },
+      {
+        "seconds": 0.159238,
+        "files_seen": 200,
+        "files_reused": 0,
+        "files_reloaded": 200
+      },
+      {
+        "seconds": 0.176999,
+        "files_seen": 200,
+        "files_reused": 0,
+        "files_reloaded": 200
+      }
+    ],
+    "incremental_refresh": [
+      {
+        "seconds": 0.014053,
+        "files_seen": 200,
+        "files_reused": 200,
+        "files_reloaded": 0
+      },
+      {
+        "seconds": 0.01512,
+        "files_seen": 200,
+        "files_reused": 200,
+        "files_reloaded": 0
+      },
+      {
+        "seconds": 0.015789,
+        "files_seen": 200,
+        "files_reused": 200,
+        "files_reloaded": 0
+      },
+      {
+        "seconds": 0.022279,
+        "files_seen": 200,
+        "files_reused": 200,
+        "files_reloaded": 0
+      },
+      {
+        "seconds": 0.015169,
+        "files_seen": 200,
+        "files_reused": 200,
+        "files_reloaded": 0
+      }
+    ]
+  },
+  "limitations": [
+    "Directory traversal and file stat checks remain.",
+    "OS caches and filesystem affect timing.",
+    "Windows conservatively uses full file reads.",
+    "Does not measure selection quality, network time, cost, or complete task success."
+  ],
+  "dataset": "synthetic"
+}

@@ -42,6 +42,21 @@ jev-skills doctor --live
 
 Configuration defaults to `~/.jev-skill-router/config.json`. Set `JEV_SKILLS_HOME` or use `jev-skills --config /path/config.json COMMAND` to isolate profiles. The global `--config` flag goes **before** the subcommand. Running setup without `--offline` chooses live mode; no key is written into config JSON.
 
+## Routing limits
+
+Existing configuration files use the defaults for new fields. Adjust these fields in your local config JSON:
+
+| Setting | Default | Meaning |
+| --- | ---: | --- |
+| `max_concurrency` | 3 | Independent requests at once; use 1 for serial operation |
+| `route_timeout_seconds` | 45 | Shared routing time budget; asynchronous network work is cancelled on expiry |
+| `timeout_seconds` | 15 | Maximum time for one HTTP request |
+| `max_api_calls` | 32 | Actual HTTP attempts per route, **including retries** |
+| `excerpt_chars` | 900 | Total evidence characters per skill, sampled across long bodies |
+| `cache_seconds` | 180 | Exact repeated-decision lifetime in one process |
+
+Retrying consumes the same request allowance; missing usage remains unknown. Local filesystem work is checked between phases, so a blocked filesystem can exceed the time budget. Lower concurrency if the provider returns rate limits. [Real workload evaluation](EVALUATION.md) records accuracy, delays and every attempted request before you decide whether routing helps.
+
 ## Credentials for GUI-launched hosts
 
 GUI apps often do not inherit variables exported in a terminal. Prefer `auth` with the supported OS keychain and the same OS user as the MCP server. If a keychain is locked/unavailable, the command reports failure rather than saving a plaintext fallback.

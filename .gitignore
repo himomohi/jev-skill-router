@@ -17,3 +17,4 @@ video/out/
 .DS_Store
 local-config.json
 local-*.json
+jev-local-results/

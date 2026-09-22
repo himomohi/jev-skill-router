@@ -6,6 +6,8 @@
 
 Live routing sends the focused task, supplied recent context, skill names/descriptions, and shortlisted instruction excerpts to `https://api.typesafe.ai/v1/systemone`. The full conversation is not read automatically. API keys are sent only in the Authorization header to that fixed HTTPS endpoint; redirects are not followed. Review TypeSafe's current legal/data-processing policies before using confidential content.
 
+Excerpts can now include interior and final portions of a long body, not only its beginning. Review the entire registered skill for sensitive content. Excerpt sampling is not redaction.
+
 The code does not reliably detect or redact every secret in a task or skill. Do not put secrets in either. There is no telemetry uploader or persistent routing transcript. The in-memory cache contains task-derived hashes and decisions and disappears with the process. A CLI result or host conversation may still store returned skill content; host logging is outside this server's control.
 
 ## Credentials
@@ -17,6 +19,8 @@ The code does not reliably detect or redact every secret in a task or skill. Do 
 Reads are bounded UTF-8 text from known skill directories. Absolute paths, parent traversal, hidden paths, symlinks, unsupported extensions and some secret-like names are rejected. Parsing uses safe YAML loading. Binary assets and references outside the selected directory require the host's separately authorized tools.
 
 This is not a hardened filesystem sandbox: a malicious local process able to change paths concurrently may race checks, hard links are not a separate isolation boundary, and allowed text files may contain sensitive content under innocuous names. Do not make untrusted shared directories available to this process. Discovery can read multiple large files, so cap root scope for large/hostile collections.
+
+On Linux/macOS, unchanged parsed catalog entries may be reused after identity, size and timestamp checks. A filesystem that preserves/spoofs all observed metadata can defeat this optimization's change detection; use `Catalog.refresh(force=True)` where metadata is unreliable. Windows conservatively rereads files. Selected content is always read again and path-checked.
 
 ## Model decisions do not grant permission
 

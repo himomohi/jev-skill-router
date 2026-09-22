@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 — 2026-09-22
+
+- Reuse unchanged catalog files on Linux/macOS; re-read changed files and invalidate routing decisions. Windows retains full reads, and `refresh(force=True)` forces a complete refresh.
+- Sample candidate evidence from the beginning, end and relevant interior passages within the existing character budget.
+- Process independent Jev batches concurrently (default: 3), with a shared 45-second routing budget, cancellation on failure and HTTP-attempt limits that include retries.
+- Measure cold and cached latency, actual HTTP attempts, usage completeness and selection accuracy with 24 English/Korean evaluation cases. Compare compatible runs without recording task text, skill content or API keys in reports.
+- Clarify context accounting and live-evaluation instructions. Synthetic context reduction is not a cost or speed improvement claim; live Jev quality and end-to-end efficiency remain unverified.
+
 ## 0.1.0 — 2026-09-22
 
 Initial source release: external SKILL.md indexing, documented TypeSafe REST integration, sharded Choice ranking and independent Noul/Score verification, one read-only MCP tool, exact-request in-memory caching, bounded reference reads, explicit offline installation demo, OS-keychain support, host registration helpers and optional Claude pre-turn hook.

@@ -26,7 +26,7 @@ This project moves the **selection inventory**, not merely the bodies, outside t
 
 ## Start with the bundled examples
 
-Download and extract the source ZIP from [v0.1.0](https://github.com/himomohi/jev-skill-router/releases/tag/v0.1.0), install **Python 3.11+**, then run:
+Download and extract the [latest source ZIP](https://github.com/himomohi/jev-skill-router/archive/refs/heads/main.zip), install **Python 3.11+**, then run:
 
 ```bash
 python Install.py --offline
@@ -89,7 +89,7 @@ flowchart TD
     F --> H[Your agent executes with its own tools]
 ```
 
-Jev first selects candidates from skill metadata, then checks their relevance against instruction excerpts. If no candidate meets the fit and confidence thresholds, no skill is loaded. Small catalogs normally need two logical API requests; larger catalogs require more.
+Jev first selects candidates from skill metadata, then checks their relevance against instruction excerpts. If no candidate meets the fit and confidence thresholds, no skill is loaded. Small catalogs normally need two logical API requests; larger catalogs require more. Independent batches run up to three at a time. A 45-second routing deadline and a 32-request cap, including retries, bound the default live route. [Settings](docs/INSTALLATION.md#routing-limits).
 
 The default returns at most **one** skill; set `max_skills` to 2 or 3 for broader tasks. Low fit, low confidence, malformed API responses, missing keys, and API failures do not silently substitute another model or keyword routing.
 
@@ -99,10 +99,10 @@ The default returns at most **one** skill; set `max_skills` to 2 or 3 for broade
 
 | Skills | Progressive baseline: metadata + selected body | Router: interface + call + bookkeeping + same body | Reduction |
 | ---: | ---: | ---: | ---: |
-| 5 | 3,794 | 4,401 | -16.00% |
-| 50 | 16,304 | 4,402 | 73.00% |
-| 200 | 58,004 | 4,403 | 92.41% |
-| 500 | 141,404 | 4,403 | 96.89% |
+| 5 | 3,794 | 4,461 | -17.58% |
+| 50 | 16,304 | 4,462 | 72.63% |
+| 200 | 58,004 | 4,463 | 92.31% |
+| 500 | 141,404 | 4,463 | 96.84% |
 
 **Five skills are worse, not better:** the extra interface outweighs a tiny inventory. The benefit grows with catalog size and description length. Large conversation histories, large selected bodies, already-deferred discovery, and repeated MCP calls change the overall result. Cached metadata can also be cheap; less context does not guarantee a smaller bill or faster task completion.
 
@@ -114,6 +114,17 @@ jev-skills benchmark --skill python-debug
 ```
 
 [Comparison method and limitations](docs/BENCHMARKS.md)
+
+## Test your own workload
+
+```bash
+# Validate the 24 English/Korean example cases without an API call
+python scripts/evaluate_live.py --preflight
+# After configuring your key: real requests, capped including retries
+python scripts/evaluate_live.py --allow-live --max-requests 64
+```
+
+The report separates selection quality, fresh/cache-hit latency, HTTP requests and reported usage. It does not claim to measure final task success or the main model’s total bill. [Evaluation and comparisons](docs/EVALUATION.md).
 
 ## Use it
 
@@ -133,7 +144,7 @@ The router does **not** execute scripts, install arbitrary packages, modify appl
 
 ## Convenience without hidden behavior
 
-One external library can serve several local harnesses. Descriptions are read in full during discovery; bodies are loaded only when selected. File hashes invalidate cached decisions when skill content changes. A persistent MCP process reuses its HTTP pool and has a small in-memory exact-request cache. Separate CLI invocations and Claude hook processes do **not** share that cache.
+One external library can serve several local harnesses. Catalog files are parsed locally; only selected instructions are returned to the main model. Linux/macOS reuse unchanged parsed files, while Windows conservatively rereads them. A persistent MCP process reuses its HTTP pool and exact-request cache. Separate CLI invocations and Claude hook processes do **not** share that cache.
 
 Configuration is local JSON, keys stay out of that JSON, and the provider endpoint is fixed to TypeSafe HTTPS. Live requests disclose focused task text, skill descriptions, and shortlisted excerpts to TypeSafe. Do not register confidential material without permission. [Security](SECURITY.md).
 

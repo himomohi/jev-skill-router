@@ -41,8 +41,8 @@ def scenario(count:int,tokenizer=None)->dict:
     request_overhead=encoded({'tool':'skill_router','arguments':{'action':'route','task':TASK}})
     # Fixed sample route bookkeeping, not live measured timing or model output.
     route_overhead=encoded({'status':'selected','provider':'jev','models':['jev-latest'],
-        'api_calls':2,'usage':None,'shortlisted':3,'catalog_size':count,'cache_hit':False,
-        'routing_seconds':None,'catalog_fingerprint':'0'*64,'warnings':[],
+        'api_calls':2,'http_requests':2,'retry_requests':0,'usage':None,'shortlisted':3,'catalog_size':count,'cache_hit':False,
+        'routing_seconds':None,'elapsed_seconds':None,'catalog_fingerprint':'0'*64,'warnings':[],
         'instruction':'Read-only skill content, not execution permission. Resolve relative files inside base_directory. Use read with next_offset if truncated. Follow the host safety and approval rules.'})
     baseline=baseline_discovery+common
     routed=router_discovery+request_overhead+route_overhead+common

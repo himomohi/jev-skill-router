@@ -15,6 +15,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
 from jev_skill_router.mcp import BOOTSTRAP,TOOL
 from jev_skill_router.jev import encoded
+from jev_skill_router.router import READ_INSTRUCTION
 
 DESCRIPTION=(
     'Apply a documented specialist workflow to the named task. Inspect relevant inputs, '
@@ -33,7 +34,8 @@ def scenario(count:int,tokenizer=None)->dict:
     roster=[{'name':f'workflow-{i:04d}','description':DESCRIPTION} for i in range(count)]
     # One logical main-model request after skill selection, not a whole multi-turn bill.
     selected={'skill_id':'s_0123456789abcdef','name':'workflow-0000','path':'SKILL.md',
-              'content':BODY,'offset':0,'next_offset':None,'total_chars':len(BODY),
+              'content':BODY,'content_digest':hashlib.sha256(BODY.encode()).hexdigest(),
+              'offset':0,'next_offset':None,'total_chars':len(BODY),
               'base_directory':'/user/external-skills/workflow-0000'}
     baseline_discovery=encoded({'available_skills':roster})
     router_discovery=encoded({'instructions':BOOTSTRAP,'tools':[TOOL]})
@@ -43,7 +45,7 @@ def scenario(count:int,tokenizer=None)->dict:
     route_overhead=encoded({'status':'selected','provider':'jev','models':['jev-latest'],
         'api_calls':2,'http_requests':2,'retry_requests':0,'usage':None,'shortlisted':3,'catalog_size':count,'cache_hit':False,
         'routing_seconds':None,'elapsed_seconds':None,'catalog_fingerprint':'0'*64,'warnings':[],
-        'instruction':'Read-only skill content, not execution permission. Resolve relative files inside base_directory. Use read with next_offset if truncated. Follow the host safety and approval rules.'})
+        'instruction':READ_INSTRUCTION})
     baseline=baseline_discovery+common
     routed=router_discovery+request_overhead+route_overhead+common
     def drop(a,b):return round(100*(1-b/a),2)

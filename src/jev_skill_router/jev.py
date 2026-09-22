@@ -15,16 +15,21 @@ ENDPOINT='https://api.typesafe.ai/v1/systemone'
 RETRY_STATUSES={429,500,502,503,504,529}
 
 def encoded(value: object) -> bytes:
-    return json.dumps(value,ensure_ascii=False,separators=(',',':'),allow_nan=False).encode('utf-8')
+    try:
+        return json.dumps(value,ensure_ascii=False,separators=(',',':'),allow_nan=False).encode('utf-8')
+    except (ValueError,TypeError,UnicodeError,RecursionError) as e:
+        raise RouterError('Request contains invalid JSON text') from e
 
 def probability(value: object) -> float:
-    if type(value) not in (int,float) or not math.isfinite(value) or not 0<=value<=1:
+    if type(value) not in (int,float) or not 0<=value<=1 or not math.isfinite(value):
         raise RouterError("Invalid probability in Jev response")
     return float(value)
 
 def validate_response(data: object, questions: dict) -> dict:
-    if not isinstance(data,dict) or not isinstance(data.get('answers'),dict) or not isinstance(data.get('model'),str):
+    if not isinstance(data,dict) or not isinstance(data.get('answers'),dict) or not isinstance(data.get('model'),str) or not data['model']:
         raise RouterError("Malformed Jev response")
+    try: data['model'].encode('utf-8')
+    except UnicodeError as e: raise RouterError('Malformed Jev model ID') from e
     for key,q in questions.items():
         answer=data['answers'].get(key)
         if not isinstance(answer,dict) or answer.get('type')!=q['type']:
@@ -40,11 +45,11 @@ def validate_response(data: object, questions: dict) -> dict:
             raise RouterError("Invalid Jev probability distribution")
         if q['type']=='choice':
             selected=answer.get('choice')
-            if selected not in expected or probabilities[selected]+1e-6<max(probabilities.values()):
+            if not isinstance(selected,str) or selected not in expected or probabilities[selected]+1e-6<max(probabilities.values()):
                 raise RouterError("Invalid Jev choice")
         else:
             score=answer.get('score')
-            if type(score) not in (int,float) or not math.isfinite(score) or not 0<=score<=len(q['criteria'])-1:
+            if type(score) not in (int,float) or not 0<=score<=len(q['criteria'])-1 or not math.isfinite(score):
                 raise RouterError("Invalid Jev score")
     return data
 
@@ -185,7 +190,7 @@ class JevClient:
             if not response.is_success:
                 raise RouterError(f"Jev HTTP {response.status_code}; check authentication, limits, and model configuration")
             try: data=json.loads(content)
-            except ValueError as e: raise RouterError("Jev returned invalid JSON") from e
+            except (ValueError,RecursionError) as e: raise RouterError("Jev returned invalid JSON") from e
             validated=validate_response(data,questions)
             usage=validated.get('usage')
             if isinstance(usage,dict) and all(type(usage.get(key)) is int and usage[key]>=0 for key in ('input_tokens','output_tokens')):

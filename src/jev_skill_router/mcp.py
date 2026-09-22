@@ -5,6 +5,7 @@ Supported protocol versions: 2024-11-05, 2025-03-26, 2025-06-18.
 """
 from __future__ import annotations
 import json
+import re
 import sys
 from .config import RouterError
 from .router import Router
@@ -13,7 +14,7 @@ from . import __version__
 VERSIONS={'2024-11-05','2025-03-26','2025-06-18'}
 TOOL={
  'name':'skill_router',
- 'description':'Select task-relevant skills through Jev and load only their instructions. Use action=route before specialized work; use action=read for a selected skill reference or the next page. Does not execute scripts or grant permissions.',
+ 'description':'Select task-relevant skills through Jev and load only their instructions. Use action=route before specialized work; use action=read for a selected skill reference or the next page. When continuing a file, pass its content_digest as expected_digest. Does not execute scripts or grant permissions.',
  'inputSchema':{
    'type':'object','additionalProperties':False,
    'properties':{
@@ -22,7 +23,8 @@ TOOL={
      'context':{'type':'string','description':'Only task-relevant context, not the full conversation.'},
      'skill_id':{'type':'string','description':'ID returned by route; required for read.'},
      'path':{'type':'string','description':'Skill-relative text file; defaults to SKILL.md.'},
-     'offset':{'type':'integer','minimum':0,'description':'Character offset from next_offset.'}
+     'offset':{'type':'integer','minimum':0,'description':'Character offset from next_offset.'},
+     'expected_digest':{'type':'string','pattern':'^[0-9a-f]{64}$','description':'Previous content_digest for this file. Required when offset is greater than zero; prevents mixing pages from changed files.'}
    },'required':['action']},
  'annotations':{'readOnlyHint':True,'destructiveHint':False,'idempotentHint':False,'openWorldHint':True},
 }
@@ -38,8 +40,15 @@ def dispatch(router:Router,args:dict)->dict:
     if action=='route': return router.route(args.get('task',''),args.get('context',''))
     if action=='read':
         if not isinstance(args.get('skill_id'),str): raise RouterError('skill_id is required')
+        offset=args.get('offset',0)
+        if type(offset) is not int or offset<0: raise RouterError('offset must be a nonnegative integer')
+        digest=args.get('expected_digest')
+        if 'expected_digest' in args and (not isinstance(digest,str) or re.fullmatch(r'[0-9a-f]{64}',digest) is None):
+            raise RouterError('expected_digest must be a lowercase SHA-256 digest')
+        if offset>0 and digest is None:
+            raise RouterError('Continuing a file requires its previous content_digest as expected_digest; restart at offset 0 if unavailable')
         router.catalog.refresh()
-        return router.catalog.read(args['skill_id'],args.get('path','SKILL.md'),args.get('offset',0),router.config.max_output_chars)
+        return router.catalog.read(args['skill_id'],args.get('path','SKILL.md'),offset,router.config.max_output_chars,expected_digest=digest)
     raise RouterError('action must be route or read')
 
 class Server:
@@ -51,6 +60,10 @@ class Server:
                 raise ProtocolError(-32600,'Invalid JSON-RPC request')
             if 'id' in message and (type(request_id) not in (int,str) and request_id is not None):
                 request_id=None;raise ProtocolError(-32600,'Invalid request ID')
+            if isinstance(request_id,str):
+                try: request_id.encode('utf-8')
+                except UnicodeError:
+                    request_id=None;raise ProtocolError(-32600,'Invalid request ID')
             method=message['method'];params=message.get('params',{})
             if not isinstance(params,dict): raise ProtocolError(-32602,'params must be an object')
             if 'id' not in message: return None
@@ -85,8 +98,12 @@ def serve(router:Router):
             if len(line)>1_000_000:
                 # A very large frame cannot be safely resynchronized; terminate this session.
                 print('MCP input frame exceeds limit',file=sys.stderr);return 2
-            try: message=json.loads(line)
-            except (ValueError,UnicodeError):
+            try:
+                message=json.loads(line)
+                # The JSON decoder accepts lone surrogates and nonfinite values.
+                # Reject them before dispatch, and bound nesting failures to this frame.
+                json.dumps(message,ensure_ascii=False,allow_nan=False).encode('utf-8')
+            except (ValueError,UnicodeError,RecursionError):
                 response={'jsonrpc':'2.0','id':None,'error':{'code':-32700,'message':'Parse error'}}
             else:
                 try: response=server.handle(message)
@@ -94,7 +111,9 @@ def serve(router:Router):
                     # Do not leak request text, credentials, or tracebacks into model context.
                     response={'jsonrpc':'2.0','id':message.get('id') if isinstance(message,dict) else None,'error':{'code':-32603,'message':'Internal server error'}}
             if response is not None:
-                sys.stdout.buffer.write((json.dumps(response,ensure_ascii=False,allow_nan=False)+'\n').encode('utf-8'))
+                # ASCII escapes also keep unusual local filenames/provider text from
+                # breaking the persistent transport while preserving decoded Unicode.
+                sys.stdout.buffer.write((json.dumps(response,ensure_ascii=True,allow_nan=False)+'\n').encode('utf-8'))
                 sys.stdout.buffer.flush()
         return 0
     finally: router.close()

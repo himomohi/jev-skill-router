@@ -99,10 +99,10 @@ The default returns at most **one** skill; set `max_skills` to 2 or 3 for broade
 
 | Skills | Progressive baseline: metadata + selected body | Router: interface + call + bookkeeping + same body | Reduction |
 | ---: | ---: | ---: | ---: |
-| 5 | 3,794 | 4,461 | -17.58% |
-| 50 | 16,304 | 4,462 | 72.63% |
-| 200 | 58,004 | 4,463 | 92.31% |
-| 500 | 141,404 | 4,463 | 96.84% |
+| 5 | 3,878 | 4,843 | -24.88% |
+| 50 | 16,388 | 4,844 | 70.44% |
+| 200 | 58,088 | 4,845 | 91.66% |
+| 500 | 141,488 | 4,845 | 96.58% |
 
 **Five skills are worse, not better:** the extra interface outweighs a tiny inventory. The benefit grows with catalog size and description length. Large conversation histories, large selected bodies, already-deferred discovery, and repeated MCP calls change the overall result. Cached metadata can also be cheap; less context does not guarantee a smaller bill or faster task completion.
 
@@ -114,6 +114,16 @@ jev-skills benchmark --skill python-debug
 ```
 
 [Comparison method and limitations](docs/BENCHMARKS.md)
+
+## Check readiness before an API call
+
+```bash
+jev-skills plan "Debug a Python traceback and failing tests"
+```
+
+This local preflight reports ranking/verification request bounds, retry headroom and blocking limits without reading your key or contacting Jev. It shares the live router's planning code. A ready plan means the local limits fit; authentication and decision quality still need live evaluation. [Plan output and exit codes](docs/INSTALLATION.md#check-a-route-before-spending).
+
+Long-file reads return a `content_digest`. Continue with the returned `next_offset` and `expected_digest=content_digest`; version 0.3.0 requires the digest for continuation so file edits cannot silently mix pages. The router's own bridge is excluded from candidates, and equivalent root paths are deduplicated.
 
 ## Test your own workload
 

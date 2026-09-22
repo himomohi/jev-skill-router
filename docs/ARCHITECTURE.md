@@ -8,6 +8,8 @@
 
 `Router` sends focused task/context as state. Metadata lives in Choice criteria rather than the main LLM prompt. Large inventories are packed into bounded Choice requests. Every shard contributes up to three candidates. Each shortlisted skill is then assessed by two independent questions; both include the same description and excerpt because questions do not see one another's question data.
 
+The reserved metadata name `jev-skill-router` is excluded from candidates and the catalog fingerprint so the installed bridge cannot select itself. It remains on disk and its parse result can be reused. Roots are normalized/deduplicated after original-path symlink checks. Inaccessible discovery subdirectories produce warnings; malformed metadata warnings give fixed diagnostic reasons without quoting YAML contents.
+
 Long-body evidence includes the opening, ending and two interior windows within the same `excerpt_chars` limit (900 by default). Literal task-term overlap prioritizes interior windows; without overlap, both interior thirds are sampled. This heuristic selects evidence only: Jev still chooses and verifies skills. It is not a guarantee of complete coverage, semantic quality, or cross-language understanding. Full short bodies are preserved and truncated excerpts are explicitly marked.
 
 Noul fit >= 0.65, Score usefulness >= 1.5 on a 0–2 rubric, and Score confidence >= 0.50 are the defaults. These are starting policies, **not calibrated thresholds**. Accepted candidates are sorted by fit, score, confidence, then ID. Scores from the same absolute rubric are used across shards; shard-local Choice probabilities are not compared globally. Default `max_skills=1` can be changed to 2 or 3.
@@ -22,6 +24,8 @@ The code preflights conservative verification byte bounds using character-width 
 
 Each persistent router process has an in-memory cache of at most 128 exact state/config/catalog combinations, with a default 180-second lifetime. It stores selection decisions, not a disk transcript. Content is reread and must match its evaluated digest before being returned or cached. CLI and hook processes are independent; no cross-process cache or full conversation tracking is claimed.
 
+`Router.plan(task, context)` and CLI `plan` expose the same fresh-route packing/preflight without credentials or network access. The report gives conservative base-call bounds, a hard HTTP-attempt bound, remaining retry headroom and local blocking reasons. It neither consults decision-cache hits nor predicts billing, authentication or routing quality. Live routing rejects an impossible plan before credential lookup.
+
 `routing_seconds` measures current selection/cache lookup time, including on cache hits. `elapsed_seconds` includes current catalog refresh and selected-file reads. A cache hit preserves its original selection time separately as `original_routing_seconds`. `http_requests` includes retries; `api_calls` retains its logical-call meaning for compatibility. Missing usage on any attempted request makes total `usage` unknown. `router.last_metrics` provides local phase timings, file-reuse counts and transport counters even when a route fails; these diagnostics are not injected into every main-model response.
 
 ## Loading versus execution
@@ -29,6 +33,12 @@ Each persistent router process has an in-memory cache of at most 128 exact state
 The MCP interface is one static tool with `route` and `read` actions. The full catalog is never returned by `tools/list`. A CLI-only `list` command supports local administration; do not paste its output into the main-model context when trying to save space.
 
 A selected response includes `base_directory` and `next_offset`. Local references are read with `read`. Binary assets and cross-directory references are not exposed through this reader. The host can use its separately authorized filesystem/execution tools when appropriate. Parking a skill can break references outside its own folder or assumptions about the original install path; inspect such skills before moving them.
+
+Every read also returns `content_digest`, the SHA-256 of decoded UTF-8 text (an initial BOM is stripped; CRLF is preserved). Public MCP and CLI reads at offset > 0 require the previous file's digest as `expected_digest`. The reader compares it before slicing or checking the offset, so both same-length edits and truncation fail safely. A changed file requires discarding prior pages and restarting/rerouting. The Python `Catalog.read` primitive remains compatible with callers omitting the digest; custom harnesses must pass it themselves to enforce continuity.
+
+Malformed/deeply nested JSON and invalid Unicode frames return sanitized errors without terminating the stdio session. Oversized frames still terminate because stream resynchronization is not guaranteed. Responses use JSON Unicode escapes on the wire; decoded tool content preserves the original Unicode.
+
+The stdio server handles requests serially. MCP cancellation notifications do not interrupt an active route; it runs until completion or its configured deadline. The HTTP cancellation guarantees above apply to errors/deadlines inside the router, not to host cancellation notifications.
 
 No shell-execution API is exposed by the router. No call uninstalls plugins or changes approval policies. Setup registers the MCP entry and, for Claude/Codex, one small bridge. The optional Claude hook receives the user prompt and injects the same selected content before the main model request; the bridge tells the model not to route twice for the same task.
 

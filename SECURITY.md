@@ -24,6 +24,8 @@ On Linux/macOS, unchanged parsed catalog entries may be reused after identity, s
 
 ## Model decisions do not grant permission
 
+Paginated MCP/CLI reads require a file digest for offsets greater than zero. A changed file is rejected rather than combining old and new pages. The digest identifies decoded text, not a trust signature; it does not make an untrusted skill safe. Python callers must pass `expected_digest` to `Catalog.read` for the same continuity check. Malformed protocol input and malformed expected provider fields are reported as errors without including their contents.
+
 Skill excerpts can contain prompt injection. Decision prompts tell Jev to treat them as data, but that is not a complete prompt-injection defense. Validate trust before registration. The router exposes no execute/shell tool and never automatically installs or runs a selected script. The host's higher-priority policy, sandbox and approval requirements remain in force.
 
 ## Mutations

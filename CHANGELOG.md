@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 — 2026-09-22
+
+- Add `jev-skills plan TASK [--context TEXT]`: inspect fresh-route request bounds, retry headroom and blocking limits without reading credentials or calling Jev. Live routing uses the same preflight before credential lookup.
+- Return `content_digest` on every file read. **Pagination change:** MCP/CLI continuation with an offset greater than zero now requires that digest as `expected_digest` / `--expected-digest`; changed files fail before returning mixed pages. Start at offset zero or reroute to obtain a new revision.
+- Exclude the reserved `jev-skill-router` bridge name from selection, including after parking. Preserve the bridge on disk and in the parser cache. Normalize/deduplicate root aliases only after checking their original paths for symlinks.
+- Report unreadable discovery directories and actionable metadata errors without quoting invalid YAML contents. Setup now respects the configured catalog size limit.
+- Keep MCP sessions alive after deeply nested JSON, invalid Unicode or nonfinite input. Convert malformed provider choice values, excessive numeric values and invalid model IDs into safe errors.
+- Refresh synthetic context accounting to include the larger tool schema and file revision digest. These checks do not establish live Jev accuracy, speed or cost improvements.
+
 ## 0.2.1 — 2026-09-22
 
 - Generate task-specific excerpts only for shortlisted skills. Cached character-width bounds reserve safe verification request sizes before API spending.

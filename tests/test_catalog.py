@@ -1,4 +1,5 @@
 from pathlib import Path
+import hashlib
 import os
 import pytest
 from jev_skill_router.catalog import Catalog,MAX_FILE_BYTES
@@ -284,6 +285,151 @@ def test_evaluated_read_checks_full_text_digest(make_skill,newline,bom):
     result=cat.read(skill.id,limit=3,expected_digest=skill.digest)
     assert result['content']==raw.decode()[:3]
     source.write_bytes(bom+raw.replace(b'Before',b'After!'))
-    with pytest.raises(RouterError,match='changed after evaluation'):
+    with pytest.raises(RouterError,match='File changed'):
         cat.read(skill.id,limit=3,expected_digest=skill.digest)
     assert cat.read(skill.id)['content'].endswith('After!')
+
+
+@pytest.mark.parametrize('path',['SKILL.md','references/guide.md'])
+@pytest.mark.parametrize('changed',['same_length','shortened'])
+def test_revision_bound_pagination_rejects_changed_file(make_skill,path,changed):
+    directory=make_skill(body='Original instructions ' * 20)
+    target=directory/path
+    if path!='SKILL.md':
+        target.parent.mkdir()
+        target.write_text('Reference instructions ' * 20,encoding='utf-8')
+    cat=Catalog([str(directory.parent)]);sid=next(iter(cat.skills))
+    first=cat.read(sid,path,limit=100)
+    before=target.read_bytes()
+    target.write_bytes(before.replace(b'instructions',b'CHANGED_TEXT') if changed=='same_length' else b'Short')
+    with pytest.raises(RouterError,match='restart reading or reroute'):
+        cat.read(sid,path,offset=first['next_offset'],expected_digest=first['content_digest'])
+    restarted=cat.read(sid,path)
+    assert restarted['content_digest']!=first['content_digest']
+
+
+@pytest.mark.parametrize('digest',[True,17,[],{},'', 'a'*63, 'a'*65, 'g'*64, 'A'*64])
+def test_invalid_read_digest_is_rejected_before_file_access(make_skill,monkeypatch,digest):
+    directory=make_skill();cat=Catalog([str(directory.parent)])
+    monkeypatch.setattr(Catalog,'_text',staticmethod(lambda path: pytest.fail('Read malformed revision token')))
+    with pytest.raises(RouterError,match='expected_digest'):
+        cat.read(next(iter(cat.skills)),expected_digest=digest)
+
+
+def test_wrong_read_digest_does_not_return_content(skill_root):
+    cat=Catalog([str(skill_root)])
+    with pytest.raises(RouterError,match='File changed'):
+        cat.read(next(iter(cat.skills)),expected_digest='0'*64)
+
+
+@pytest.mark.parametrize('newline',['\n','\r\n'])
+@pytest.mark.parametrize('bom',[b'',b'\xef\xbb\xbf'])
+def test_read_digest_is_stable_across_unicode_pages(make_skill,newline,bom):
+    directory=make_skill(body='한글 설명과 café 및 🐱\n끝까지 읽으세요.'*10)
+    source=directory/'SKILL.md'
+    expected=source.read_text(encoding='utf-8').replace('\n',newline)
+    source.write_bytes(bom+expected.encode('utf-8'))
+    cat=Catalog([str(directory.parent)]);sid=next(iter(cat.skills))
+    digest=hashlib.sha256(expected.encode('utf-8')).hexdigest()
+    pages=[];offset=0
+    while True:
+        result=cat.read(sid,offset=offset,limit=19,expected_digest=digest)
+        assert result['content_digest']==digest
+        pages.append(result['content'])
+        offset=result['next_offset']
+        if offset is None:break
+    assert ''.join(pages)==expected
+
+
+def test_native_router_bridge_is_excluded_without_changing_disk(make_skill,skill_file_reads):
+    from jev_skill_router.integrations import SKILL
+    bridge=make_skill('jev-skill-router')/'SKILL.md'
+    bridge.write_text(SKILL,encoding='utf-8')
+    make_skill('python-debug')
+    cat=Catalog([str(bridge.parent.parent)],limit=1)
+    assert {s.name for s in cat.skills.values()}=={'python-debug'}
+    assert not cat.warnings
+    assert bridge.read_text(encoding='utf-8')==SKILL
+    fingerprint=cat.fingerprint
+    skill_file_reads.clear()
+    cat.refresh()
+    assert {s.name for s in cat.skills.values()}=={'python-debug'}
+    assert cat.fingerprint==fingerprint
+    assert cat.refresh_stats=={'files_seen':2,'files_reused':2,'files_reloaded':0}
+    assert not skill_file_reads
+
+
+def test_catalog_with_only_native_bridge_is_empty(make_skill):
+    from jev_skill_router.config import Config
+    from jev_skill_router.router import Router
+    directory=make_skill('jev-skill-router',description='Select and load specialized skill instructions')
+    router=Router(Config(roots=[str(directory.parent)],mode='offline'))
+    result=router.route('Select and load specialized skill instructions')
+    assert result['status']=='empty_catalog'
+    assert result['selected']==[]
+    assert (directory/'SKILL.md').is_file()
+
+
+def test_edit_to_reserved_name_removes_cached_candidate(make_skill):
+    directory=make_skill();source=directory/'SKILL.md'
+    cat=Catalog([str(directory.parent)])
+    original=source.read_text(encoding='utf-8')
+    source.write_text(original.replace('name: python-debug','name: jev-skill-router'),encoding='utf-8')
+    cat.refresh()
+    assert not cat.skills and not cat.warnings
+    source.write_text(original,encoding='utf-8')
+    cat.refresh()
+    assert {s.name for s in cat.skills.values()}=={'python-debug'}
+
+
+def test_root_aliases_do_not_duplicate_skills_or_exceed_limit(make_skill):
+    directory=make_skill();root=directory.parent
+    cat=Catalog([str(root),str(root/'..'/root.name)],limit=1)
+    baseline=Catalog([str(root)],limit=1)
+    assert list(cat.skills)==list(baseline.skills)
+    assert cat.refresh_stats['files_seen']==1
+    assert not cat.warnings
+    cat.refresh()
+    assert cat.refresh_stats=={'files_seen':1,'files_reused':1,'files_reloaded':0}
+
+
+def test_root_normalization_does_not_hide_symlink_ancestors(make_skill,tmp_path):
+    directory=make_skill();root=directory.parent
+    outside=tmp_path/'outside';outside.mkdir()
+    link=root/'link'
+    try:link.symlink_to(outside,target_is_directory=True)
+    except OSError:pytest.skip('OS does not permit symlinks for this user')
+    alias=link/'..'/root.name
+    assert alias.resolve()==root.resolve()
+    cat=Catalog([str(alias)])
+    assert not cat.skills
+    assert 'Symbolic links and reparse points' in cat.warnings[0]
+
+
+def test_unreadable_subdirectory_is_reported_without_exception_details(make_skill,monkeypatch):
+    good=make_skill('good');denied=make_skill('denied')
+    original=os.scandir
+    def denied_scandir(path):
+        if Path(path)==denied:
+            raise PermissionError(13,'PRIVATE_EXCEPTION_DETAILS',str(denied))
+        return original(path)
+    monkeypatch.setattr(os,'scandir',denied_scandir)
+    cat=Catalog([str(good.parent)])
+    assert {s.name for s in cat.skills.values()}=={'good'}
+    assert cat.warnings==[f'{denied}: unreadable skill directory']
+    assert 'PRIVATE_EXCEPTION_DETAILS' not in str(cat.warnings)
+
+
+@pytest.mark.parametrize('frontmatter,reason',[
+    ('name: example','invalid description'),
+    ('description: example','invalid name'),
+    ('- example','frontmatter must be a mapping'),
+    ('name: [PRIVATE_SOURCE_TEXT\ndescription: example','invalid YAML frontmatter'),
+])
+def test_invalid_metadata_warning_is_actionable_and_safe(make_skill,frontmatter,reason):
+    directory=make_skill();source=directory/'SKILL.md'
+    source.write_text('---\n'+frontmatter+'\n---\nbody',encoding='utf-8')
+    cat=Catalog([str(directory.parent)])
+    assert not cat.skills
+    assert cat.warnings==[f'{source}: {reason}']
+    assert 'PRIVATE_SOURCE_TEXT' not in str(cat.warnings)

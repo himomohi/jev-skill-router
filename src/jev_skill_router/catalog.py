@@ -13,6 +13,8 @@ from .windows_metadata import change_stamp as windows_change_stamp
 MAX_FILE_BYTES=512_000
 TEXT_SUFFIXES={".md",".txt",".py",".js",".mjs",".cjs",".ts",".tsx",".jsx",".json",".yaml",".yml",".toml",".sh",".ps1",".html",".css",".csv",".sql",".r",".rs",".go",".swift"}
 BLOCKED_NAMES={"credentials.json","secrets.json","secrets.yaml","id_rsa","id_ed25519","token.json"}
+# The native bridge is retained on disk for the host, but must never route to itself.
+RESERVED_SKILL_NAMES={'jev-skill-router'}
 # Windows needs native change time; st_ctime there can be creation time.
 STAT_CACHE_SUPPORTED=True
 
@@ -95,15 +97,22 @@ class Catalog:
         queries fall back to full reads. This is not protection against hostile metadata spoofing. The read
         tool always reads the current file, independently of this cache.
         """
-        skills={};warnings=[];seen=set();file_cache={}
+        skills={};warnings=[];seen=set();seen_roots=set();file_cache={}
         stats={'files_seen':0,'files_reused':0,'files_reloaded':0}
         for root in self.roots:
             try:
                 self._no_symlinks(root)
                 if not root.is_dir(): raise RouterError("root is not a directory")
+                # Inspect the original spelling first so normalization cannot
+                # hide a symlink/reparse component followed by parent traversal.
+                root=root.resolve(strict=True)
             except (RouterError,OSError) as e:
                 warnings.append(f"{root}: {e}");continue
-            for current,dirs,files in os.walk(root,followlinks=False):
+            if root in seen_roots: continue
+            seen_roots.add(root)
+            def unreadable_directory(error):
+                warnings.append(f"{error.filename or root}: unreadable skill directory")
+            for current,dirs,files in os.walk(root,followlinks=False,onerror=unreadable_directory):
                 here=Path(current)
                 dirs[:]=sorted(d for d in dirs if not d.startswith('.') and d not in {'node_modules','__pycache__','venv'} and not self._is_redirect(here/d))
                 if 'SKILL.md' not in files: continue
@@ -117,9 +126,10 @@ class Catalog:
                     # An absent inode cannot reliably identify replacements.
                     if STAT_CACHE_SUPPORTED and not force and stamp[1] and stamp[-1] and cached and cached[0]==stamp:
                         skill=cached[1]
-                        skills[skill.id]=skill
                         file_cache[file.absolute()]=cached
                         stats['files_reused']+=1
+                        if skill.name in RESERVED_SKILL_NAMES: continue
+                        skills[skill.id]=skill
                         if len(skills)>self.limit: raise RouterError("Catalog exceeds configured max_catalog_skills")
                         continue
                     stats['files_reloaded']+=1
@@ -138,12 +148,19 @@ class Catalog:
                     sid='s_'+hashlib.sha256(str(file.absolute()).encode()).hexdigest()[:16]
                     body='\n'.join(lines[end+1:]).strip()
                     skill=Skill(sid,name,description.strip(),here.absolute(),file.absolute(),body,hashlib.sha256(text.encode()).hexdigest())
-                    skills[sid]=skill
                     file_cache[file.absolute()]=(stamp,skill)
+                    if skill.name in RESERVED_SKILL_NAMES: continue
+                    skills[sid]=skill
                     if len(skills)>self.limit: raise RouterError("Catalog exceeds configured max_catalog_skills")
                 except (RouterError,yaml.YAMLError,OSError,RecursionError) as e:
                     if len(skills)>self.limit: raise RouterError("Catalog exceeds configured max_catalog_skills") from e
-                    warnings.append(f"{file}: invalid or unsupported skill ({type(e).__name__})")
+                    # RouterError contains our fixed safe diagnostics. YAML
+                    # exceptions can quote source text; never expose those.
+                    reason=str(e) if isinstance(e,RouterError) else (
+                        'invalid YAML frontmatter' if isinstance(e,yaml.YAMLError) else
+                        'frontmatter nesting is too deep' if isinstance(e,RecursionError) else
+                        'skill file could not be read')
+                    warnings.append(f"{file}: {reason}")
         self.skills=dict(sorted(skills.items(),key=lambda x:(x[1].name,str(x[1].source))))
         self.warnings=warnings
         self._file_cache=file_cache
@@ -155,6 +172,9 @@ class Catalog:
         if not skill: raise RouterError("Unknown skill ID. Route a task to obtain an ID.")
         if type(offset) is not int or offset<0 or type(limit) is not int or not 1<=limit<=50000:
             raise RouterError("Invalid read range")
+        if expected_digest is not None and (not isinstance(expected_digest,str) or
+                len(expected_digest)!=64 or any(c not in '0123456789abcdef' for c in expected_digest)):
+            raise RouterError("expected_digest must be a lowercase SHA-256 content digest")
         if not isinstance(path,str) or not path or '\\' in path or Path(path).is_absolute() or PureWindowsPath(path).drive:
             raise RouterError("Only skill-relative paths are permitted")
         rel=Path(path)
@@ -167,8 +187,9 @@ class Catalog:
         if not target.resolve().is_relative_to(skill.directory.resolve()):
             raise RouterError("Path escapes the skill directory")
         text=self._text(target)
-        if expected_digest is not None and hashlib.sha256(text.encode()).hexdigest()!=expected_digest:
-            raise RouterError("Skill file changed after evaluation; retry routing")
+        content_digest=hashlib.sha256(text.encode('utf-8')).hexdigest()
+        if expected_digest is not None and content_digest!=expected_digest:
+            raise RouterError("File changed since it was evaluated or read; restart reading or reroute")
         if offset>len(text): raise RouterError("Offset is beyond the end of the file")
         end=min(len(text),offset+limit)
-        return {"skill_id":skill.id,"name":skill.name,"path":path,"content":text[offset:end],"offset":offset,"next_offset":end if end<len(text) else None,"total_chars":len(text),"base_directory":str(skill.directory)}
+        return {"skill_id":skill.id,"name":skill.name,"path":path,"content":text[offset:end],"content_digest":content_digest,"offset":offset,"next_offset":end if end<len(text) else None,"total_chars":len(text),"base_directory":str(skill.directory)}

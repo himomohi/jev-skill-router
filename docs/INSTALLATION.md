@@ -57,6 +57,26 @@ Existing configuration files use the defaults for new fields. Adjust these field
 
 Retrying consumes the same request allowance; missing usage remains unknown. Local filesystem work is checked between phases, so a blocked filesystem can exceed the time budget. Lower concurrency if the provider returns rate limits. [Real workload evaluation](EVALUATION.md) records accuracy, delays and every attempted request before you decide whether routing helps.
 
+### Check a route before spending
+
+```bash
+jev-skills plan "Debug Python tracebacks" --context "Only the failing unit test"
+```
+
+`plan` reads the local catalog, uses the same packing and verification bounds as live routing, and returns `ready`, `rank_requests`, `verification_requests_upper_bound`, `base_requests_upper_bound` and `http_requests_upper_bound`. It never looks up credentials or calls the provider. Exit code 0 means the local plan fits; 1 means an empty catalog or a blocking budget; 2 means invalid input/configuration. Review `warnings` even when `ready` is true: unreadable or malformed skills cannot participate.
+
+The plan assumes a fresh decision, even when the process already has a cached selection. Retry headroom is the HTTP cap minus the conservative base-call bound. It does not promise that every retry can complete, validate authentication, predict which skill will win, or estimate money/latency. Offline plans report zero provider requests. No catalog is exposed through the MCP tool listing.
+
+### Continue a long file without mixing revisions
+
+Each selected skill or file read includes `content_digest`, `next_offset` and `path`. Keep the digest for **that file** when requesting its next page:
+
+```json
+{"action":"read","skill_id":"s_ID_FROM_ROUTE","path":"SKILL.md","offset":12000,"expected_digest":"COPY_THE_64_CHARACTER_CONTENT_DIGEST"}
+```
+
+Use the actual `next_offset` and digest from the preceding result. From the CLI, pass `--offset OFFSET --expected-digest DIGEST`. Starting with version 0.3.0, an offset greater than zero without the digest is rejected. If the file changes, discard the partial content and restart at offset zero, or reroute a changed `SKILL.md`. A reference file has its own digest; do not reuse the parent skill's digest for it. Existing first-page reads remain supported.
+
 ## Credentials for GUI-launched hosts
 
 GUI apps often do not inherit variables exported in a terminal. Prefer `auth` with the supported OS keychain and the same OS user as the MCP server. If a keychain is locked/unavailable, the command reports failure rather than saving a plaintext fallback.
@@ -77,6 +97,8 @@ jev-skills park ~/.agents/skills --apply
 Only immediate nonhidden child directories containing `SKILL.md` move. `.system`, the `jev-skill-router` bridge, nested collections without a direct `SKILL.md`, and symlinked directories are not moved. Do not use this on package-manager-owned or plugin-managed folders. Whole skills and internal references move together, but paths outside each skill may need attention.
 
 The external destination is `~/.jev-skill-router/vault/<migration-id>/`. A manifest records moves and the config path. Successful parking adds the vault root. Other harness installations sharing the original path may lose native discovery too; that is the purpose of moving files, so review the impact first.
+
+The metadata name `jev-skill-router` is reserved for the native bridge and excluded from routing candidates. Its file stays available to the host; it cannot consume a selection slot after parking. Use a different name for an ordinary skill. Equivalent root paths are deduplicated; refresh/reroute to obtain current IDs if older configuration used paths containing `..`.
 
 Close/restart or begin a fresh host session. Inspect its skill listing: the original catalog should no longer appear from that root. `doctor` cannot prove absence of every plugin/system/project-level source; do not claim savings merely because setup succeeded.
 

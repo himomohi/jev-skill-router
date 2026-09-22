@@ -35,6 +35,59 @@ def test_real_subprocess_stdio(skill_root,tmp_path):
     content=json.loads(responses[-1]['result']['content'][0]['text'])
     assert content['selected'][0]['name']=='python-debug'
 
+
+def test_stdio_rejects_malformed_frames_and_keeps_session_alive(tmp_path):
+    config=tmp_path/'config.json';Config(mode='offline').save(config)
+    frames=[
+        b'['*10000+b'0'+b']'*10000,
+        json.dumps(request('ping',id='\ud800')).encode(),
+        json.dumps(request('ping',{'invalid':'\ud800'})).encode(),
+        b'{"jsonrpc":"2.0","id":1,"method":"ping","params":{"value":NaN}}',
+        b'\xff',
+    ]
+    frames.append(json.dumps(request('ping',id='한국어-🐱'),ensure_ascii=False).encode())
+    process=subprocess.run([sys.executable,'-m','jev_skill_router','--config',str(config),'serve'],input=b'\n'.join(frames)+b'\n',capture_output=True,env={**os.environ,'PYTHONPATH':str(ROOT/'src')},timeout=15)
+    assert process.returncode==0 and process.stderr==b''
+    responses=[json.loads(line) for line in process.stdout.splitlines()]
+    assert len(responses)==len(frames)
+    assert all(response['error']['code']==-32700 for response in responses[:-1])
+    assert responses[-1]=={'jsonrpc':'2.0','id':'한국어-🐱','result':{}}
+
+
+def test_invalid_unicode_request_id_has_safe_error():
+    server=Server(None)
+    result=server.handle(request('ping',id='\ud800'))
+    assert result['id'] is None and result['error']['code']==-32600
+
+
+def test_mcp_continuation_requires_matching_file_digest(make_skill):
+    skill=make_skill(body='Read these instructions. '*120)
+    router=Router(Config(roots=[str(skill.parent)],mode='offline',max_output_chars=1000))
+    try:
+        sid=next(iter(router.catalog.skills))
+        args={'action':'read','skill_id':sid}
+        first=dispatch(router,args)
+        continued={**args,'offset':first['next_offset']}
+        with pytest.raises(RouterError,match='expected_digest'):
+            dispatch(router,continued)
+        continued['expected_digest']=first['content_digest']
+        second=dispatch(router,continued)
+        assert second['offset']==first['next_offset'] and second['content_digest']==first['content_digest']
+        file=skill/'SKILL.md';file.write_text(file.read_text()+'\nChanged instruction.',encoding='utf-8')
+        with pytest.raises(RouterError,match='changed'):
+            dispatch(router,continued)
+    finally:router.close()
+
+
+@pytest.mark.parametrize('field,value',[('offset',True),('offset','1'),('offset',-1),('expected_digest',None),('expected_digest',123),('expected_digest','A'*64),('expected_digest','bad')])
+def test_mcp_invalid_continuation_arguments_are_tool_errors(skill_root,field,value):
+    router=Router(Config(roots=[str(skill_root)],mode='offline'))
+    try:
+        server=Server(router);server.handle(request('initialize',{'protocolVersion':'2025-06-18'}))
+        result=server.handle(request('tools/call',{'name':'skill_router','arguments':{'action':'read','skill_id':next(iter(router.catalog.skills)),field:value}}))
+        assert result['result']['isError']
+    finally:router.close()
+
 def test_hook_protocol(skill_root,tmp_path):
     config=tmp_path/'config.json';Config(roots=[str(skill_root)],mode='offline').save(config)
     process=subprocess.run([sys.executable,'-m','jev_skill_router','--config',str(config),'hook'],input=json.dumps({'prompt':'Debug Python'}),capture_output=True,text=True,env={**os.environ,'PYTHONPATH':str(ROOT/'src')},timeout=15)

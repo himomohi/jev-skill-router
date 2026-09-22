@@ -22,7 +22,10 @@ def parser():
     doctor=commands.add_parser('doctor');doctor.add_argument('--live',action='store_true')
     commands.add_parser('list')
     route=commands.add_parser('route');route.add_argument('task');route.add_argument('--context',default='')
+    plan=commands.add_parser('plan',help='Check fresh-route request bounds without credentials or API calls')
+    plan.add_argument('task');plan.add_argument('--context',default='')
     read=commands.add_parser('read');read.add_argument('skill_id');read.add_argument('--path',default='SKILL.md');read.add_argument('--offset',type=int,default=0)
+    read.add_argument('--expected-digest',help='content_digest from the previous page; required with --offset greater than zero')
     commands.add_parser('hook')
     park=commands.add_parser('park');park.add_argument('source',type=Path);park.add_argument('--apply',action='store_true')
     restore=commands.add_parser('restore');restore.add_argument('manifest',type=Path);restore.add_argument('--apply',action='store_true')
@@ -49,7 +52,7 @@ def main(argv=None):
             roots=[str(Path(x).expanduser().absolute()) for x in args.root]
             cfg=Config.load(args.config) if args.config.exists() else Config()
             cfg.roots=list(dict.fromkeys(cfg.roots+roots));cfg.mode='offline' if args.offline else 'live'
-            catalog=Catalog(cfg.roots)
+            catalog=Catalog(cfg.roots,cfg.max_catalog_skills)
             if not catalog.skills: raise RouterError('No valid SKILL.md files found. Check the root before setup.')
             cfg.save(args.config)
             result={'config':str(args.config),'skills':len(catalog.skills),'mode':cfg.mode,
@@ -79,7 +82,13 @@ def main(argv=None):
             if args.command=='list':
                 output({'skills':[dict(s.metadata(),directory=str(s.directory)) for s in router.catalog.skills.values()],'warnings':router.catalog.warnings})
             elif args.command=='route': output(router.route(args.task,args.context))
-            elif args.command=='read': output(router.catalog.read(args.skill_id,args.path,args.offset,cfg.max_output_chars))
+            elif args.command=='plan':
+                result=router.plan(args.task,args.context);output(result)
+                return 0 if result['ready'] else 1
+            elif args.command=='read':
+                if args.offset>0 and args.expected_digest is None:
+                    raise RouterError('Continuation requires --expected-digest from the previous page content_digest')
+                output(router.catalog.read(args.skill_id,args.path,args.offset,cfg.max_output_chars,expected_digest=args.expected_digest))
             elif args.command=='doctor':
                 result={'mode':cfg.mode,'skills':len(router.catalog.skills),'warnings':router.catalog.warnings,
                         'native_exposure':'Not automatically detectable for every harness/plugin. Inspect its loaded skill list in a NEW session.',

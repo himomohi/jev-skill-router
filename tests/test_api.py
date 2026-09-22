@@ -55,7 +55,7 @@ def test_network_failure_is_not_retried():
         assert len(calls)==1
     finally:client.close()
 
-@pytest.mark.parametrize('value',[True,1.1,-.1,float('nan'),float('inf'),'0.9'])
+@pytest.mark.parametrize('value',[True,1.1,-.1,float('nan'),float('inf'),'0.9',10**500])
 def test_invalid_noul_rejected(value):
     with pytest.raises(RouterError):validate_response({'model':'fixture','answers':{'check':{'type':'noul','noul':value}}},Q)
 
@@ -67,6 +67,46 @@ def test_choice_requires_known_ids_and_correct_winner():
     assert validate_response(answer,q)==answer
     answer['answers']['rank']['probabilities']={'c':1}
     with pytest.raises(RouterError):validate_response(answer,q)
+
+
+@pytest.mark.parametrize('selected',[[],{},None,True,1])
+def test_malformed_choice_is_a_safe_provider_error(selected):
+    q={'rank':{'type':'choice','criteria':{'a':'A'}}}
+    answer={'model':'fixture','answers':{'rank':{'type':'choice','choice':selected,'probabilities':{'a':1},'confidence':.8}}}
+    with pytest.raises(RouterError,match='Invalid Jev choice'):
+        validate_response(answer,q)
+
+
+def test_huge_score_is_a_safe_provider_error():
+    q={'quality':{'type':'score','criteria':['No','Yes']}}
+    answer={'model':'fixture','answers':{'quality':{'type':'score','score':10**500,'probabilities':{'0':0,'1':1},'confidence':.8}}}
+    with pytest.raises(RouterError,match='Invalid Jev score'):
+        validate_response(answer,q)
+
+
+@pytest.mark.parametrize('model',['','\ud800',None,[]])
+def test_malformed_model_id_is_a_safe_provider_error(model):
+    with pytest.raises(RouterError,match='Jev'):
+        validate_response({**VALID,'model':model},Q)
+
+
+def test_deep_provider_json_is_rejected_without_traceback():
+    body=b'['*10000+b'0'+b']'*10000
+    client=JevClient(Config(),'fixture-key',httpx.MockTransport(lambda _:httpx.Response(200,content=body)))
+    try:
+        with pytest.raises(RouterError,match='invalid JSON'):
+            client.ask({},Q)
+        assert client.metrics_snapshot()['http_requests']==1
+    finally:client.close()
+
+
+def test_invalid_unicode_request_is_rejected_before_http():
+    client=JevClient(Config(),'fixture-key',httpx.MockTransport(lambda _:pytest.fail('Network called')))
+    try:
+        with pytest.raises(RouterError,match='invalid JSON text'):
+            client.ask({'task':'\ud800'},Q)
+        assert client.metrics_snapshot()['http_requests']==0
+    finally:client.close()
 
 def test_request_budget_checked_before_http():
     client=JevClient(Config(),'fixture-key',httpx.MockTransport(lambda r:pytest.fail('Network called')))

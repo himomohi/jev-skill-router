@@ -37,7 +37,19 @@ An isolated guided installation of 0.3.0 was upgraded using the new `Install.py 
 
 ## Cross-platform CI and release
 
-The updated Tests workflow requires Ubuntu Python 3.11/3.13, macOS Python 3.12 and Windows Python 3.12, includes the official MCP SDK check, and gates version metadata. The Release workflow accepts only a successful main push's exact tested SHA. [v0.4.0 CI run 35753374736](https://github.com/himomohi/jev-skill-router/actions/runs/35753374736) passed all four jobs for `757ffdf`: Windows 286 passed; other jobs 284 passed with two Windows-only skips. The release uploaded all four assets but remained a draft because the published-tag endpoint cannot find drafts. Version 0.4.1 adds authenticated draft discovery, fresh numeric-ID lookup and five regression cases. Its current CI/publication outcome will be recorded after the push.
+The updated Tests workflow requires Ubuntu Python 3.11/3.13, macOS Python 3.12 and Windows Python 3.12, includes the official MCP SDK check, and gates version metadata. The Release workflow accepts only a successful main push's exact tested SHA. [v0.4.0 CI run 35753374736](https://github.com/himomohi/jev-skill-router/actions/runs/35753374736) passed all four jobs for `757ffdf`: Windows 286 passed; other jobs 284 passed with two Windows-only skips. The release uploaded all four assets but remained a draft because the published-tag endpoint cannot find drafts. Version 0.4.1 adds authenticated draft discovery, fresh numeric-ID lookup and five regression cases.
+
+**v0.4.1 passed and was published.** [Tests run 35753979087](https://github.com/himomohi/jev-skill-router/actions/runs/35753979087) verified commit [`f72e87e`](https://github.com/himomohi/jev-skill-router/commit/f72e87e2890593653768c580a6258cbed209e912):
+
+| Environment | Test result |
+| --- | --- |
+| Ubuntu / Python 3.11 | 289 passed, 2 Windows-only skipped |
+| Ubuntu / Python 3.13 | 289 passed, 2 Windows-only skipped |
+| macOS / Python 3.12 | 289 passed, 2 Windows-only skipped |
+| Windows / Python 3.12 | 291 passed |
+
+[Release run 35754099365](https://github.com/himomohi/jev-skill-router/actions/runs/35754099365) succeeded. [v0.4.1](https://github.com/himomohi/jev-skill-router/releases/tag/v0.4.1) is published and marked latest, with its tag pointing to that exact tested commit. The wheel, sdist, source ZIP and SHA256SUMS were uploaded and downloaded for byte verification before the draft was published. The subsequent main commit updates only this validation record; release assets retain the tested snapshot.
+
 
 Historical [v0.3.0 CI run 35737405992](https://github.com/himomohi/jev-skill-router/actions/runs/35737405992) passed for [`f1e0607`](https://github.com/himomohi/jev-skill-router/commit/f1e0607d98ccacf700e198ce71e75bc27c60179e): Windows 201 passed; the other three jobs 199 passed with two Windows-only skips. These earlier results do not substitute for the current version's CI.
 
@@ -68,7 +80,7 @@ The host checks require the corresponding actual CLI on PATH and use disposable 
 
 ## 한국어 요약
 
-현재 로컬 테스트 289개를 통과했고 Windows 전용 2개는 해당 CI 환경에서 검증합니다. 공식 MCP SDK 왕복과 실제 Codex·Claude 등록/연결을 통과했습니다. 요청 취소, 선택형 대규모 검색, 설정 보존 업데이트, 비교 평가 및 버전 일치 배포를 보강했습니다. 96개 자체 작성 사례의 로컬 기준선 결과와 후보 누락도 함께 공개합니다.
+로컬은 289개 통과·Windows 전용 2개 제외입니다. Windows CI에서는 전용 테스트를 포함한 291개 전부 통과했습니다. Ubuntu 두 환경과 macOS도 각각 289개 통과·Windows 전용 2개 제외로 완료했습니다. 0.4.1 릴리스를 테스트 커밋 f72e87e에서 생성하고 게시했으며, 네 다운로드 파일의 바이트와 체크섬도 확인했습니다. 공식 MCP SDK 왕복과 실제 Codex·Claude 등록/연결을 통과했습니다. 요청 취소, 선택형 대규모 검색, 설정 보존 업데이트, 비교 평가 및 버전 일치 배포를 보강했습니다. 96개 자체 작성 사례의 로컬 기준선 결과와 후보 누락도 함께 공개합니다.
 
 실제 Jev 판단·요금·지연, 모델을 사용한 하네스 작업 성공률, Cursor UI와 OS 키체인은 아직 미검증입니다. 이 한계를 숨기고 90점이나 90% 정확도로 표시하지 않습니다.
 

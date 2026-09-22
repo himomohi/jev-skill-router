@@ -1,0 +1,41 @@
+{
+  "mode": "offline-lexical-demo",
+  "real_jev_calls": 0,
+  "installed_wheel": "jev_skill_router-0.1.0-py3-none-any.whl",
+  "isolated_package_import": true,
+  "dependency_source": "Reused preinstalled HTTPX/PyYAML through an explicit dependency path; not a fresh dependency download.",
+  "example_catalog_size": 6,
+  "selected_skill": "csv-profile",
+  "execution": "The local test host invoked the bundled read-only CSV script. The router did not execute it.",
+  "csv_result": {
+    "columns": [
+      "id",
+      "name",
+      "email"
+    ],
+    "rows": 4,
+    "missing_by_column_index": [
+      0,
+      1,
+      2
+    ],
+    "duplicate_rows": 1,
+    "malformed_rows": 0
+  },
+  "catalog_byte_accounting": {
+    "unit": "UTF-8 bytes, not model tokens",
+    "catalog_size": 6,
+    "metadata_bytes": 1032,
+    "router_discovery_bytes": 1420,
+    "discovery_reduction_percent": -37.6,
+    "model_calls": 0,
+    "scope": "Skill-related serialized content only. Excludes host framing, conversation, Jev requests, billing and latency.",
+    "selected_skill": "csv-profile",
+    "selected_payload_bytes": 1172,
+    "baseline_with_selected_bytes": 2204,
+    "router_with_selected_bytes": 2866,
+    "one_context_reduction_percent": -30.04,
+    "bookkeeping": "Illustrative fixed envelope; real route fields, prompt length and host overhead can differ."
+  },
+  "fixture_quality_claim": false
+}

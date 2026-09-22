@@ -1,0 +1,130 @@
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+import pytest
+from jev_skill_router.config import Config,RouterError
+from jev_skill_router.router import Router
+from jev_skill_router.mcp import Server,dispatch
+from jev_skill_router.migration import park,restore
+from jev_skill_router.integrations import install_client,merge_json
+
+ROOT=Path(__file__).resolve().parents[1]
+
+def request(method,params=None,id=1):return {'jsonrpc':'2.0','id':id,'method':method,'params':params or {}}
+
+def test_protocol_single_static_tool(skill_root):
+    server=Server(Router(Config(roots=[str(skill_root)],mode='offline')))
+    assert server.handle(request('tools/list'))['error']['code']==-32002
+    assert server.handle(request('initialize',{'protocolVersion':'2025-06-18'}))['result']['protocolVersion']=='2025-06-18'
+    tools=server.handle(request('tools/list'))['result']['tools']
+    assert len(tools)==1 and tools[0]['name']=='skill_router'
+    assert 'python-debug' not in json.dumps(tools)
+    response=server.handle(request('tools/call',{'name':'skill_router','arguments':{'action':'read','skill_id':'bad'}}))
+    assert response['result']['isError']
+
+def test_real_subprocess_stdio(skill_root,tmp_path):
+    config=tmp_path/'config.json';Config(roots=[str(skill_root)],mode='offline').save(config)
+    messages=[request('initialize',{'protocolVersion':'2025-06-18'}),{'jsonrpc':'2.0','method':'notifications/initialized'},request('tools/list',id=2),request('tools/call',{'name':'skill_router','arguments':{'action':'route','task':'Debug Python'}},id=3)]
+    env={**os.environ,'PYTHONPATH':str(ROOT/'src')}
+    process=subprocess.run([sys.executable,'-m','jev_skill_router','--config',str(config),'serve'],input='\n'.join(json.dumps(m) for m in messages)+'\n',capture_output=True,text=True,env=env,timeout=15)
+    assert process.returncode==0 and process.stderr==''
+    responses=[json.loads(x) for x in process.stdout.splitlines()]
+    assert [r['id'] for r in responses]==[1,2,3]
+    content=json.loads(responses[-1]['result']['content'][0]['text'])
+    assert content['selected'][0]['name']=='python-debug'
+
+def test_hook_protocol(skill_root,tmp_path):
+    config=tmp_path/'config.json';Config(roots=[str(skill_root)],mode='offline').save(config)
+    process=subprocess.run([sys.executable,'-m','jev_skill_router','--config',str(config),'hook'],input=json.dumps({'prompt':'Debug Python'}),capture_output=True,text=True,env={**os.environ,'PYTHONPATH':str(ROOT/'src')},timeout=15)
+    assert process.returncode==0
+    payload=json.loads(process.stdout)['hookSpecificOutput']
+    assert payload['hookEventName']=='UserPromptSubmit' and 'python-debug' in payload['additionalContext']
+
+def test_migration_dry_run_and_restore(make_skill,tmp_path):
+    skill=make_skill();root=skill.parent;config_file=tmp_path/'config.json'
+    cfg=Config(roots=[str(root)],mode='offline');cfg.save(config_file)
+    preview=park(root,cfg,config_file,vault=tmp_path/'vault')
+    assert preview['dry_run'] and skill.exists() and not (tmp_path/'vault').exists()
+    result=park(root,cfg,config_file,True,tmp_path/'vault')
+    assert not skill.exists()
+    assert len(Router(Config.load(config_file)).catalog.skills)==1
+    manifest=Path(result['manifest']);assert restore(manifest)['dry_run']
+    cfg=Config.load(config_file);cfg.roots.append(str(tmp_path/'other'));cfg.save(config_file)
+    restore(manifest,True)
+    assert skill.exists() and str(tmp_path/'other') in Config.load(config_file).roots
+    assert str(root) in Config.load(config_file).roots
+
+def test_restore_unregistered_original_root(make_skill,tmp_path):
+    skill=make_skill();cfg=Config(mode='offline');file=tmp_path/'config.json';cfg.save(file)
+    result=park(skill.parent,cfg,file,True,tmp_path/'vault')
+    restore(Path(result['manifest']),True)
+    assert str(skill.parent) in Config.load(file).roots
+
+def test_restore_conflict_never_overwrites(make_skill,tmp_path):
+    skill=make_skill();cfg=Config(roots=[str(skill.parent)]);file=tmp_path/'config.json';cfg.save(file)
+    result=park(skill.parent,cfg,file,True,tmp_path/'vault')
+    skill.mkdir();(skill/'important.txt').write_text('keep')
+    with pytest.raises(RouterError,match='overwrite'):restore(Path(result['manifest']),True)
+    assert (skill/'important.txt').read_text()=='keep'
+
+def test_park_preserves_bridge_and_system(make_skill,tmp_path):
+    skill=make_skill();make_skill('jev-skill-router');make_skill('builtin',root=skill.parent/'.system')
+    cfg=Config(roots=[str(skill.parent)]);file=tmp_path/'config.json';cfg.save(file)
+    result=park(skill.parent,cfg,file,True,tmp_path/'vault')
+    assert len(result['operations'])==1
+    assert (skill.parent/'jev-skill-router').exists() and (skill.parent/'.system').exists()
+
+def test_cursor_preserves_other_servers_and_backup(tmp_path):
+    target=tmp_path/'.cursor/mcp.json';target.parent.mkdir();target.write_text('{"mcpServers":{"other":{"command":"other"}},"custom":true}')
+    result=install_client('cursor',tmp_path/'config.json',home=tmp_path)
+    data=json.loads(target.read_text())
+    assert data['mcpServers']['other']['command']=='other' and data['custom']
+    assert data['mcpServers']['jev-skills']['type']=='stdio'
+    assert Path(result['backup']).exists()
+
+def test_cursor_conflict_no_write(tmp_path):
+    target=tmp_path/'.cursor/mcp.json';target.parent.mkdir();old='{"mcpServers":{"jev-skills":{"command":"existing"}}}';target.write_text(old)
+    with pytest.raises(RouterError):install_client('cursor',tmp_path/'config.json',home=tmp_path)
+    assert target.read_text()==old
+
+@pytest.mark.parametrize('field,value',[('min_fit',2),('max_skills',0),('shortlist',True),('mode','auto'),('roots','bad')])
+def test_invalid_config_rejected(field,value):
+    with pytest.raises(RouterError):Config(**{field:value}).validate()
+
+def test_invalid_config_json(tmp_path):
+    file=tmp_path/'config.json';file.write_text('[]')
+    with pytest.raises(RouterError):Config.load(file)
+
+def test_hook_missing_config_does_not_block_user_prompt(tmp_path):
+    process=subprocess.run([sys.executable,'-m','jev_skill_router','--config',str(tmp_path/'absent.json'),'hook'],input='{"prompt":"Debug Python"}',capture_output=True,text=True,env={**os.environ,'PYTHONPATH':str(ROOT/'src')},timeout=15)
+    assert process.returncode==0
+    result=json.loads(process.stdout)
+    assert result['hookSpecificOutput']['hookEventName']=='UserPromptSubmit'
+    assert 'No skill was selected' in result['hookSpecificOutput']['additionalContext']
+    assert result.get('decision')!='block'
+
+def test_measurement_uses_real_catalog_without_api(skill_root):
+    from jev_skill_router.measurement import measure
+    result=measure(Config(roots=[str(skill_root)]),'python-debug')
+    assert result['model_calls']==0 and result['selected_payload_bytes']>0
+    assert result['unit']=='UTF-8 bytes, not model tokens'
+    assert result['one_context_reduction_percent']<0
+
+def test_unknown_tool_argument_rejected(skill_root):
+    router=Router(Config(roots=[str(skill_root)],mode='offline'))
+    with pytest.raises(RouterError):dispatch(router,{'action':'route','task':'Debug Python','execute':True})
+
+def test_malformed_restore_manifest(tmp_path):
+    file=tmp_path/'migration.json';file.write_text('[]')
+    with pytest.raises(RouterError):restore(file)
+
+def test_installer_help_has_no_mutations(tmp_path):
+    process=subprocess.run([sys.executable,str(ROOT/'Install.py'),'--help'],capture_output=True,text=True,env={**os.environ,'JEV_SKILLS_HOME':str(tmp_path/'home')},timeout=10)
+    assert process.returncode==0 and '--offline' in process.stdout
+    assert not (tmp_path/'home').exists()
+
+def test_publisher_requires_explicit_visibility():
+    process=subprocess.run([sys.executable,str(ROOT/'scripts/publish_github.py')],capture_output=True,text=True,timeout=10)
+    assert process.returncode==2 and '--public' in process.stderr

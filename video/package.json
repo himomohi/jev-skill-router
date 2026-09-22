@@ -1,0 +1,10 @@
+{
+  "name": "jev-skill-router-video", "private": true, "version": "0.1.0",
+  "scripts": {
+    "studio": "remotion studio src/index.tsx",
+    "typecheck": "tsc --noEmit",
+    "render": "remotion render src/index.tsx OverviewEN ../docs/media/overview.en.mp4 && remotion render src/index.tsx OverviewKO ../docs/media/overview.ko.mp4"
+  },
+  "dependencies": {"@remotion/cli":"4.0.506","remotion":"4.0.506","react":"19.0.0","react-dom":"19.0.0"},
+  "devDependencies": {"@types/react":"19.0.0","@types/react-dom":"19.0.0","typescript":"5.8.3"}
+}

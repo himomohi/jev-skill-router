@@ -1,0 +1,69 @@
+{
+  "method": "synthetic serialized content, one main-model context after one skill is loaded",
+  "unit": "UTF-8 bytes, not model tokens",
+  "calls_to_any_model": 0,
+  "description_characters": 236,
+  "selected_instruction_characters": 2144,
+  "assumptions": [
+    "Same selected skill payload on both sides.",
+    "Baseline loads metadata, not all skill bodies.",
+    "Router side includes static MCP schema, bootstrap, a call and bookkeeping.",
+    "Generic host prompts and token framing excluded from both. Existing baseline tool schema excluded, conservatively.",
+    "Jev inputs and network latency excluded: separate service, not zero cost.",
+    "No claim about routing accuracy, token savings, cached pricing, or end-to-end speed."
+  ],
+  "results": [
+    {
+      "skills": 5,
+      "metadata_bytes": 1412,
+      "router_discovery_bytes": 1420,
+      "selected_payload_bytes": 2382,
+      "route_request_and_bookkeeping_bytes": 599,
+      "progressive_baseline_bytes": 3794,
+      "routed_main_bytes": 4401,
+      "discovery_reduction_percent": -0.57,
+      "one_context_reduction_percent": -16.0,
+      "baseline_sha256": "643634c0b72e2e502f96fa5e978e2ccf922ca9f254a571848ceeef650250aeef",
+      "routed_sha256": "1f5bc2af9e42a4dbfcb851a103c007c84dd72d6fd5b6b473d8076aef0bf4f82e"
+    },
+    {
+      "skills": 50,
+      "metadata_bytes": 13922,
+      "router_discovery_bytes": 1420,
+      "selected_payload_bytes": 2382,
+      "route_request_and_bookkeeping_bytes": 600,
+      "progressive_baseline_bytes": 16304,
+      "routed_main_bytes": 4402,
+      "discovery_reduction_percent": 89.8,
+      "one_context_reduction_percent": 73.0,
+      "baseline_sha256": "3293aa5e094ed44a006e8665230c39a04b6486cb059292d71591d9a9e3ff2f2c",
+      "routed_sha256": "69bfc19a7984d0a2b0446bcc4ff01522105a798a4504c7f34b8fec8a4b5245e0"
+    },
+    {
+      "skills": 200,
+      "metadata_bytes": 55622,
+      "router_discovery_bytes": 1420,
+      "selected_payload_bytes": 2382,
+      "route_request_and_bookkeeping_bytes": 601,
+      "progressive_baseline_bytes": 58004,
+      "routed_main_bytes": 4403,
+      "discovery_reduction_percent": 97.45,
+      "one_context_reduction_percent": 92.41,
+      "baseline_sha256": "a61ccd23bcfd27ae338ad46d29c73b54508fe71adc45d826958ea05532aedacb",
+      "routed_sha256": "e4bb2c966b3976a8d1362c89a95521761704db2c875a21421c92e1715ee2b8b1"
+    },
+    {
+      "skills": 500,
+      "metadata_bytes": 139022,
+      "router_discovery_bytes": 1420,
+      "selected_payload_bytes": 2382,
+      "route_request_and_bookkeeping_bytes": 601,
+      "progressive_baseline_bytes": 141404,
+      "routed_main_bytes": 4403,
+      "discovery_reduction_percent": 98.98,
+      "one_context_reduction_percent": 96.89,
+      "baseline_sha256": "440dd03bc75b359039c53034d87c0e4930760ad157dd2566bf1cee2d64b1b89d",
+      "routed_sha256": "fb60637e9e5004b0ce52cee4ff8a95586f36abf90380e6e59269b7937b6cb6f8"
+    }
+  ]
+}

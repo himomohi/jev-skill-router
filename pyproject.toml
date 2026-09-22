@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jev-skill-router"
+version = "0.1.0"
+description = "Keep your skill catalog outside the main LLM context. Let Jev select what to load."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "AICASTER"}]
+dependencies = ["httpx>=0.28.1,<1", "PyYAML>=6.0.2,<7"]
+
+[project.optional-dependencies]
+secure = ["keyring>=25,<26"]
+dev = ["pytest>=8,<10"]
+tokens = ["tiktoken>=0.8,<1"]
+
+[project.scripts]
+jev-skills = "jev_skill_router.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

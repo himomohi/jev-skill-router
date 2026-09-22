@@ -1,0 +1,6 @@
+{"task":"Debug a Python traceback and fix the failing unit test.","expected":["python-debug"]}
+{"task":"Review this SQL join for duplicate rows before aggregation.","expected":["sql-review"]}
+{"task":"Profile this CSV file for missing values and duplicate rows.","expected":["csv-profile"]}
+{"task":"파이썬 오류 원인을 찾고 실패하는 테스트를 수정해줘.","expected":["python-debug"]}
+{"task":"CSV 파일의 결측치와 중복 행을 확인해줘.","expected":["csv-profile"]}
+{"task":"Write a short birthday greeting for a friend.","expected":[]}

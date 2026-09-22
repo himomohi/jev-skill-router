@@ -13,6 +13,7 @@
 - 설치 설정 시 지정한 `max_catalog_skills` 제한을 적용합니다.
 - 과도하게 중첩된 JSON, 잘못된 유니코드, 비정상 숫자 입력 때문에 MCP 서버가 종료되지 않도록 수정했습니다. 잘못된 Jev 응답은 민감한 원문을 노출하지 않는 오류로 처리합니다.
 - 도구 스키마와 파일 버전 정보가 늘어난 만큼 합성 컨텍스트 비교 수치를 다시 계산했습니다. 실제 Jev 정확도·비용·속도 개선을 입증하는 수치는 아닙니다.
+- Ubuntu Python 3.11/3.13, macOS Python 3.12, Windows Python 3.12 CI를 통과했습니다. Windows는 201개 전부, 나머지 환경은 각각 199개 통과·Windows 전용 2개 제외입니다. [검증 결과](https://github.com/himomohi/jev-skill-router/actions/runs/35737405992).
 
 ## 0.2.1 — 2026-09-22
 

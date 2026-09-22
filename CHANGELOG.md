@@ -12,6 +12,7 @@
 - Report unreadable discovery directories and actionable metadata errors without quoting invalid YAML contents. Setup now respects the configured catalog size limit.
 - Keep MCP sessions alive after deeply nested JSON, invalid Unicode or nonfinite input. Convert malformed provider choice values, excessive numeric values and invalid model IDs into safe errors.
 - Refresh synthetic context accounting to include the larger tool schema and file revision digest. These checks do not establish live Jev accuracy, speed or cost improvements.
+- Verify the update on Ubuntu Python 3.11/3.13, macOS Python 3.12 and Windows Python 3.12. Windows passes all 201 tests; the other environments pass 199 with 2 Windows-only skips. [CI evidence](https://github.com/himomohi/jev-skill-router/actions/runs/35737405992).
 
 ## 0.2.1 — 2026-09-22
 

@@ -19,7 +19,18 @@ This records implementation checks, not production certification or live Jev qua
 - [Historical v0.2.1 local refresh measurement](runtime-benchmark.json): 200 synthetic files, five alternating runs per mode, Linux. Full-refresh median 147.313 ms; incremental median 21.975 ms; unchanged content reloads 200 → 0. This compares refresh modes of the current implementation, not live routing or total task speed.
 - The current context-accounting artifact includes the revision-aware schema/read envelope: 200 skills, 58,088 → 4,845 bytes (91.66%). Five skills increase the modeled payload by 24.88%.
 
-The historical CI below applies to its cited earlier commit. A new local pass does not establish that every platform has run the current source.
+## v0.3.0 cross-platform CI
+
+[CI run 35737405992](https://github.com/himomohi/jev-skill-router/actions/runs/35737405992) passed all four jobs for commit [`f1e0607`](https://github.com/himomohi/jev-skill-router/commit/f1e0607d98ccacf700e198ce71e75bc27c60179e). The subsequent validation-record update changes documentation only.
+
+| Environment | Test result | Context benchmark / evaluator preflight |
+| --- | --- | --- |
+| Ubuntu / Python 3.11 | 199 passed, 2 Windows-only skipped | Passed |
+| Ubuntu / Python 3.13 | 199 passed, 2 Windows-only skipped | Passed |
+| macOS / Python 3.12 | 199 passed, 2 Windows-only skipped | Passed |
+| Windows / Python 3.12 | 201 passed | Passed |
+
+Each job also built and installed the package from source. This establishes the tested Python/OS behavior, including native Windows catalog checks; real host UI sessions, keychain use and paid Jev inference remain outside the CI scope. The older CI results below are historical.
 
 ## Historical v0.2.0 CI
 
@@ -50,7 +61,7 @@ Provider fixtures exercise documented request/response shapes, independent verif
 
 Earlier validation also corrected a YAML description with an unquoted colon and a missing-config hook error. Regression tests cover both.
 
-The first 0.3.0 CI pass exposed a Windows-specific assumption in the new symlink-normalization regression fixture: Windows and POSIX resolved its cross-directory `..` differently before the behavior under test ran. The fixture now points to a sibling directory under the same parent, so both platforms resolve to the same intended root and still verify rejection of the original symlink component. The runtime path checks were unchanged.
+The first 0.3.0 CI run exposed a Windows-specific assumption in the new symlink-normalization regression fixture: Windows and POSIX resolved its cross-directory `..` differently before the behavior under test ran. The fixture now points to a sibling directory under the same parent, so both platforms resolve to the same intended root and still verify rejection of the original symlink component. The runtime path checks were unchanged.
 
 ## Not verified
 
@@ -74,6 +85,6 @@ See [video instructions](../video/README.md) for rendering and [publishing](PUBL
 
 ## 한국어 요약
 
-현재 소스의 로컬 테스트 199개를 통과했고 Windows 전용 테스트 2개는 로컬에서 건너뛰었습니다. 파일 버전을 확인하는 이어 읽기, 무과금 요청 사전 점검, 안내용 스킬의 자기 선택 방지, 중복 경로 통합과 MCP 입력 오류 복구를 보완했습니다. 영어·한국어 24개 사례의 사전 점검은 키 조회와 API 호출 없이 통과했습니다. 위 Linux·macOS·Windows CI 기록은 명시된 이전 커밋의 결과입니다.
+현재 소스의 로컬 테스트 199개를 통과했고 Windows 전용 테스트 2개는 로컬에서 건너뛰었습니다. 파일 버전을 확인하는 이어 읽기, 무과금 요청 사전 점검, 안내용 스킬의 자기 선택 방지, 중복 경로 통합과 MCP 입력 오류 복구를 보완했습니다. 영어·한국어 24개 사례의 사전 점검은 키 조회와 API 호출 없이 통과했습니다. 현재 0.3.0 코드의 네 CI 환경을 모두 통과했습니다. Windows에서는 201개 전부, Ubuntu 3.11/3.13과 macOS에서는 각각 199개 통과·Windows 전용 2개 제외입니다. 검증 커밋은 f1e0607이며 실제 API 호출은 포함하지 않았습니다.
 
 실제 Jev 인증·판단 품질, 사용자 하네스 실행, 운영체제 키체인은 아직 검증하지 않았습니다. 현재 91.66%는 합성 데이터의 스킬 관련 바이트 감소이며 실제 비용·속도 개선율이 아닙니다. 로컬 파일 처리 개선과 모델·전체 작업 성능은 구분해야 합니다.

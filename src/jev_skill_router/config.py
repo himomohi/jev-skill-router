@@ -47,16 +47,21 @@ class Config:
     route_timeout_seconds: float = 45.0
     retries: int = 2
     cache_seconds: int = 180
+    candidate_strategy: str = "all"
+    candidate_limit: int = 64
     def validate(self) -> Config:
-        if self.mode not in {"live", "offline"}:
+        if not isinstance(self.mode, str) or self.mode not in {"live", "offline"}:
             raise RouterError("mode must be live or offline")
         if not isinstance(self.roots, list) or any(not isinstance(x, str) for x in self.roots):
             raise RouterError("roots must be a list of local paths")
+        if not isinstance(self.candidate_strategy,str) or self.candidate_strategy not in {'all','indexed'}:
+            raise RouterError("candidate_strategy must be all or indexed")
         for key, lo, hi in [
             ("max_skills",1,3),("shortlist",1,8),("excerpt_chars",100,2000),
             ("max_output_chars",1000,50000),("max_request_bytes",8000,24000),
             ("max_api_calls",2,64),("max_concurrency",1,8),("max_catalog_skills",1,10000),
             ("retries",0,3),("cache_seconds",0,600),
+            ("candidate_limit",8,512),
         ]:
             value = getattr(self,key)
             if type(value) is not int or not lo <= value <= hi:

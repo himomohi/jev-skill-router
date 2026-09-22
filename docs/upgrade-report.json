@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "tested_date": "2026-09-22",
+  "os": "Linux",
+  "from_version": "0.3.0",
+  "to_version": "0.4.0",
+  "fresh_baseline_install": true,
+  "upgrade_succeeded": true,
+  "config_bytes_preserved": true,
+  "launcher_version": "jev-skills 0.4.0",
+  "mode_preserved": "offline",
+  "skills_preserved": 6,
+  "model_api_requests": 0,
+  "profile": "disposable temporary installation",
+  "keychain_checked": false
+}

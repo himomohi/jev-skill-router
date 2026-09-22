@@ -1,90 +1,71 @@
 # Validation record — 2026-09-22
 
-This records implementation checks, not production certification or live Jev quality. The current source is version 0.3.0. Public repository: [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router).
+Version **0.4.0**. This records engineering checks and measured scope; it is not production certification, a self-certified 90/100 score or a live Jev quality claim.
 
-## Current source checks
+## Current local results
 
-- **199 tests passed, 2 Windows-only tests skipped, in 4.77 seconds**, Linux / Python 3.12.14. Provider responses remain fixtures, not real Jev answers.
-- Revision-bound pagination covers same-length edits, truncation, reference files, CRLF/BOM and Unicode. Public MCP/CLI continuation without a digest is rejected.
-- Local request planning shares live preflight, reports conservative bounds without credentials/API calls, handles empty/offline catalogs and rejects impossible plans before key lookup.
-- Catalog checks cover bridge exclusion, warm cache reuse, root alias deduplication, symlink checks before normalization, unreadable subdirectory warnings and safe metadata diagnostics.
-- Actual MCP subprocess tests recover from deep JSON, invalid Unicode and nonfinite frames and successfully answer a following Unicode-ID ping. Malformed provider fields and oversized numbers produce safe errors.
-- Incremental catalog reuse covers new/deleted/edited files, restored modification times, same-path replacements, symlink changes, forced rehash, and changes during reads. Windows uses NTFS/ReFS change metadata when available, with full-read fallback. Native API and junction integration require Windows CI.
-- Candidate-only extraction tests cover a 200-skill catalog, UTF-8/JSON request bounds and zero-spend preflight rejection. Selected-file mutation after evaluation is rejected before returning or caching its content.
-- Evaluation report schema 3 aligns cold/warm route-only timing and includes failed warm attempts; schema 2 reports cannot be compared.
-- Concurrent API tests verify the configured bound, preserved result order, cancellation of active/queued work on errors and deadlines, actual HTTP limits including retries, and unknown usage after failed attempts.
-- Long-body evidence tests confirm relevant late text and final constraints can be included within the existing character budget. This is coverage of the extraction algorithm, not proof of better model accuracy.
-- Evaluation tests verify no credential lookup in preflight, actual HTTP/retry counters, cold and immediate-repeat timing, error/no-match denominators, interrupted cases, report privacy, strict pricing conditions and comparable-run ingestion.
-- The evaluator preflight found **24 cases: 12 English, 12 Korean, six no-match**, over the six example skills, with **zero API calls and zero credential reads**.
-- [Historical v0.2.1 local refresh measurement](runtime-benchmark.json): 200 synthetic files, five alternating runs per mode, Linux. Full-refresh median 147.313 ms; incremental median 21.975 ms; unchanged content reloads 200 → 0. This compares refresh modes of the current implementation, not live routing or total task speed.
-- The current context-accounting artifact includes the revision-aware schema/read envelope: 200 skills, 58,088 → 4,845 bytes (91.66%). Five skills increase the modeled payload by 24.88%.
+- **284 tests passed, 2 Windows-only tests skipped**, Linux / Python 3.12.14, 12.29 seconds. The official MCP SDK test ran rather than skipping. Provider unit-test responses remain fixtures.
+- Cancellation checks cover active and queued HTTP, retry waits, streamed responses, pre-cancelled routes, responsive ping, continued routing after cancellation, bounded queues, EOF cleanup and no caching of cancelled results.
+- Retrieval checks cover default full-catalog behavior, smaller catalogs, Unicode/CJK normalization, excluded body-only terms, cutoff ties, metadata edit invalidation, API-free empty retrieval, verification gates, ephemeral CLI overrides and the 4,096-skill budget boundary.
+- Upgrade checks cover preserved configuration, mode, roots, client registration and launchers, mismatched installed versions and idempotent/conflicting host registration. Actual isolated upgrade evidence is recorded separately below.
+- Release checks cover trusted-event gating, version drift, immutable tags/assets, partial draft recovery, mismatched bytes, network/authentication failures and deterministic ZIP/tar timestamps. `build_release.py check` passes for 0.4.0.
+- Existing regression coverage retains safe path/read boundaries, revision-bound pagination, malformed MCP/provider responses, shared request/deadline budgets, accounting, catalog cache invalidation, sharding, confidence/fit gates and no silent offline fallback.
 
-## v0.3.0 cross-platform CI
+## Actual protocol and host connection checks
 
-[CI run 35737405992](https://github.com/himomohi/jev-skill-router/actions/runs/35737405992) passed all four jobs for commit [`f1e0607`](https://github.com/himomohi/jev-skill-router/commit/f1e0607d98ccacf700e198ce71e75bc27c60179e). The subsequent validation-record update changes documentation only.
+| Check | Environment | Result | Scope |
+| --- | --- | --- | --- |
+| Official MCP Python SDK | 1.30.0, Python 3.12.14 | Passed | Real stdio initialize/list/route; four-page UTF-8 reconstruction; digest/traversal rejection; ping/cache reuse |
+| Codex CLI | 0.155.1, Linux | Passed | Disposable-profile registration, unchanged repeated registration, Codex app-server MCP discovery |
+| Claude Code | 2.1.278, Linux | Passed | Disposable-profile registration, unchanged repeated registration, actual MCP Connected status |
 
-| Environment | Test result | Context benchmark / evaluator preflight |
-| --- | --- | --- |
-| Ubuntu / Python 3.11 | 199 passed, 2 Windows-only skipped | Passed |
-| Ubuntu / Python 3.13 | 199 passed, 2 Windows-only skipped | Passed |
-| macOS / Python 3.12 | 199 passed, 2 Windows-only skipped | Passed |
-| Windows / Python 3.12 | 201 passed | Passed |
+[SDK raw report](mcp-sdk-report.json) · [Host connection raw report](host-connection-report.json). No API/model request was made. The direct route subprocess check in the host script is separate from the host connection: neither is evidence that a host model used a skill successfully.
 
-Each job also built and installed the package from source. This establishes the tested Python/OS behavior, including native Windows catalog checks; real host UI sessions, keychain use and paid Jev inference remain outside the CI scope. The older CI results below are historical.
+## Evaluation and scale
 
-## Historical v0.2.0 CI
+- [96 original EN/KO challenge cases](COMPARATIVE_EVALUATION.md): 48 cases per language, direct requests, paraphrases, near misses, no-match and multi-skill tasks. All pass local dataset/preflight checks without credentials. Labels are project-authored and correlated, not independently held out.
+- [Local comparison report](comparison-report.json): independent BM25 top-1 60/96 exact matches; threshold baseline 53/96. **Live Jev was not run.**
+- Production retrieval at limit 8 retained 83/92 required candidates (90.22%), with all required skills retained in 75/84 positive cases. This candidate recall is not model accuracy. Nine positive cases lose a required skill.
+- [Synthetic scale report](scaling-benchmark.json): full-catalog base request bounds are 4/7/28/58 for 200/500/2,000/4,096 skills. Indexed limit 64 gives 2 in all four scenarios. The default 32-attempt cap blocks the 58-request plan before spending. These are bounds, not live latency/cost observations.
+- [Context accounting](benchmark.json): 200 synthetic skills use 58,088 → 4,940 UTF-8 bytes (91.50% reduction). Five skills increase modeled context by 27.28%. This is one skill-related context with the same selected body, not total conversation tokens or savings.
 
-[CI run 35692027500](https://github.com/himomohi/jev-skill-router/actions/runs/35692027500) passed all four jobs: Ubuntu Python 3.11/3.13, Windows Python 3.12 and macOS Python 3.12. This predates the current changes. Current-commit results are available in the [test workflow](https://github.com/himomohi/jev-skill-router/actions/workflows/test.yml).
+## Actual upgrade check
 
-## Historical v0.1.0 checks
+An isolated guided installation of 0.3.0 was upgraded using the new `Install.py --upgrade --non-interactive --no-keychain`. The installation succeeded, config bytes were unchanged, offline mode and all six example skills remained, and the bound launcher returned `jev-skills 0.4.0`. [Raw result](upgrade-report.json). No model/API request or real keychain access occurred.
 
-| Check | Observed result | Boundary |
-| --- | --- | --- |
-| Local Python suite | **72 passed in 2.00 seconds**, Linux / Python 3.12.14 | TypeSafe responses are HTTP fixtures, not live model answers. |
-| [GitHub CI](https://github.com/himomohi/jev-skill-router/actions/runs/35685705223) | All four jobs passed: Ubuntu Python 3.11 and 3.13, macOS Python 3.12, Windows Python 3.12 | Tests and synthetic benchmark; no real desktop client or keychain session. Tested code commit `63d31214e5e827dfc0bf4e480cd85dab7ac98b6e`. |
-| Clean dependency installation | Fresh virtual environment installed `.[dev,secure]` from registry dependencies | Linux installation, not a clean Windows/macOS guided-install test. |
-| Guided installer | `Install.py --offline --non-interactive --client none --no-keychain` succeeded in a separate temporary application directory | Runtime, six example skills, launcher, non-live doctor and a Python-debug route checked. No user client configuration or native skills changed. |
-| MCP stdio and Claude hook | Actual subprocess initialization, tool listing, routing, selected-file reading, hook input/output and error paths passed | Not an official MCP conformance suite or a real host UI test. |
-| CSV example | Offline selector chose `csv-profile`; host executed the bundled read-only script and checked four rows, one duplicate, missing counts `[0, 1, 2]` | No Jev call; router does not execute scripts. [Recorded result](demo-run.json). |
-| Context comparison | Committed counts and hashes reproduced for 5/50/200/500 synthetic skills | UTF-8 bytes, not model tokens, billing, latency or routing quality. [Method](BENCHMARKS.md). |
-| [Remotion build and render](https://github.com/himomohi/jev-skill-router/actions/runs/35685682423) | `npm ci`, dependency-backed TypeScript check and both EN/KO renders succeeded | Rendered source commit `b4910f477e741ff6a573374c4f6b39b6d032aeef`; video code unchanged by later test/docs updates. |
-| Remotion video inspection | Both outputs: 1280×720, 24 fps, 720 frames; five scenes per language visually inspected | 30 seconds of video, approximately 30.06-second container duration. Conceptual animation, not a live product recording. Release files: `overview.en.mp4`, `overview.ko.mp4`. |
-| Separate previews | EN/KO Pillow + FFmpeg previews and posters inspected | Repository `preview.*.mp4` files are not Remotion outputs. |
+## Cross-platform CI and release
 
-The workflow artifact ZIP has SHA-256 `b0a61057e3821d31262d7a1fd9d8c8bcd5437aff7adf4485c58e084631e60c31`; the downloaded archive matched it.
+The updated Tests workflow requires Ubuntu Python 3.11/3.13, macOS Python 3.12 and Windows Python 3.12, includes the official MCP SDK check, and gates version metadata. The Release workflow accepts only a successful main push's exact tested SHA. Current 0.4.0 run and publication results will be recorded after the push.
 
-## Test coverage and corrected issues
+Historical [v0.3.0 CI run 35737405992](https://github.com/himomohi/jev-skill-router/actions/runs/35737405992) passed for [`f1e0607`](https://github.com/himomohi/jev-skill-router/commit/f1e0607d98ccacf700e198ce71e75bc27c60179e): Windows 201 passed; the other three jobs 199 passed with two Windows-only skips. These earlier results do not substitute for the current version's CI.
 
-Catalog metadata, all six example skills, duplicates, malformed files, bounded reads, symlink/traversal rejection, exact LF/CRLF pagination, and file-hash cache invalidation are covered. Windows CI initially exposed universal-newline normalization in the pagination test's expected text. The test now writes and compares explicit LF and CRLF byte content; runtime behavior was unchanged, and all four CI jobs then passed.
+Historical v0.2.1 [local refresh measurement](runtime-benchmark.json): 200 synthetic files, five alternating runs per mode on Linux; median full refresh 147.313 ms versus incremental 21.975 ms, unchanged file reloads 200 → 0. This is local traversal/parsing, not model or whole-task speed.
 
-Provider fixtures exercise documented request/response shapes, independent verification, malformed answers, invalid probabilities, authentication failure, retries and request budgets. Routing covers no-match, abstention, confidence/fit gates, a 270-skill sharding case, explicit offline labeling and caching. Setup/migration checks cover preserved settings, dry-run/apply/restore and collision refusal.
+## Remaining external verification
 
-Earlier validation also corrected a YAML description with an unquoted colon and a missing-config hook error. Regression tests cover both.
-
-The first 0.3.0 CI run exposed a Windows-specific assumption in the new symlink-normalization regression fixture: Windows and POSIX resolved its cross-directory `..` differently before the behavior under test ran. The fixture now points to a sibling directory under the same parent, so both platforms resolve to the same intended root and still verify rejection of the original symlink component. The runtime path checks were unchanged.
-
-## Not verified
-
-- Live Jev authentication, semantic accuracy, Korean routing quality, inference latency or actual billed cost. No live request was made during these checks.
-- Real Codex, Claude Code or Cursor installation and use. Generated configuration and local subprocess tests do not establish real host compatibility. Disable or remove native skill exposure separately and start a new session.
-- Real macOS Keychain, Windows Credential Manager or Linux Secret Service behavior. Code has no plaintext key fallback, but OS credential-store integration needs live platform testing.
-- The current 91.66% comparison for 200 skills measures only synthetic skill-related UTF-8 payload (58,088 versus 4,845 bytes), not total context, tokens, cost or speed. The historical v0.1.0 illustration used 92.41%. Small catalogs can have greater overhead.
+- Live Jev authentication and selection quality, including Korean; inference latency and actual billed cost. No live key was available in this development environment.
+- Native-versus-routed model task completion under identical conditions. CLI connection checks are insufficient evidence for this claim.
+- Cursor UI integration and actual macOS Keychain, Windows Credential Manager or Linux Secret Service behavior.
+- Long-running production workloads and independently adjudicated holdout cases. [Quality gates](QUALITY.md).
 
 ## Reproduce
 
 ```bash
-python -m pip install -e '.[dev]'
+python -m pip install -e '.[dev,protocol]'
 python -m pytest -q
+python scripts/build_release.py check
 python scripts/benchmark_context.py
-python scripts/benchmark_runtime.py --synthetic-skills 200
-python scripts/evaluate_live.py --preflight
-python Install.py --offline
+python scripts/benchmark_scaling.py
+python scripts/compare_routing.py --preflight
+python scripts/check_mcp_client.py
+python scripts/check_host.py --client codex
+python scripts/check_host.py --client claude
 ```
 
-See [video instructions](../video/README.md) for rendering and [publishing](PUBLISHING.md) for release details. For live provider verification, configure a local key with `jev-skills auth` or server-side `TYPESAFE_API_KEY`, select live mode, then run `jev-skills doctor --live`. The optional evaluator requires `--allow-live` and incurs API usage. Never commit an API key.
+The host checks require the corresponding actual CLI on PATH and use disposable profiles. Live evaluation requires secure local credential setup and explicit `--allow-live`; it can incur API charges. Reports without a live run must not be presented as live performance evidence.
 
 ## 한국어 요약
 
-현재 소스의 로컬 테스트 199개를 통과했고 Windows 전용 테스트 2개는 로컬에서 건너뛰었습니다. 파일 버전을 확인하는 이어 읽기, 무과금 요청 사전 점검, 안내용 스킬의 자기 선택 방지, 중복 경로 통합과 MCP 입력 오류 복구를 보완했습니다. 영어·한국어 24개 사례의 사전 점검은 키 조회와 API 호출 없이 통과했습니다. 현재 0.3.0 코드의 네 CI 환경을 모두 통과했습니다. Windows에서는 201개 전부, Ubuntu 3.11/3.13과 macOS에서는 각각 199개 통과·Windows 전용 2개 제외입니다. 검증 커밋은 f1e0607이며 실제 API 호출은 포함하지 않았습니다.
+현재 로컬 테스트 284개를 통과했고 Windows 전용 2개는 해당 CI 환경에서 검증합니다. 공식 MCP SDK 왕복과 실제 Codex·Claude 등록/연결을 통과했습니다. 요청 취소, 선택형 대규모 검색, 설정 보존 업데이트, 비교 평가 및 버전 일치 배포를 보강했습니다. 96개 자체 작성 사례의 로컬 기준선 결과와 후보 누락도 함께 공개합니다.
 
-실제 Jev 인증·판단 품질, 사용자 하네스 실행, 운영체제 키체인은 아직 검증하지 않았습니다. 현재 91.66%는 합성 데이터의 스킬 관련 바이트 감소이며 실제 비용·속도 개선율이 아닙니다. 로컬 파일 처리 개선과 모델·전체 작업 성능은 구분해야 합니다.
+실제 Jev 판단·요금·지연, 모델을 사용한 하네스 작업 성공률, Cursor UI와 OS 키체인은 아직 미검증입니다. 이 한계를 숨기고 90점이나 90% 정확도로 표시하지 않습니다.

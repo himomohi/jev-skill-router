@@ -45,7 +45,7 @@ def scenario(count:int,tokenizer=None)->dict:
     route_overhead=encoded({'status':'selected','provider':'jev','models':['jev-latest'],
         'api_calls':2,'http_requests':2,'retry_requests':0,'usage':None,'shortlisted':3,'catalog_size':count,'cache_hit':False,
         'routing_seconds':None,'elapsed_seconds':None,'catalog_fingerprint':'0'*64,'warnings':[],
-        'instruction':READ_INSTRUCTION})
+        'instruction':READ_INSTRUCTION,'retrieval':{'strategy':'all','considered_skills':count,'index_applied':False,'truncated':False}})
     baseline=baseline_discovery+common
     routed=router_discovery+request_overhead+route_overhead+common
     def drop(a,b):return round(100*(1-b/a),2)

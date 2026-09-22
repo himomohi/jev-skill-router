@@ -1,0 +1,53 @@
+name: Release
+on:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+    branches: [main]
+
+# A workflow_run can receive write permissions even after a fork PR. Both the
+# trigger and the job guard are deliberate; only a tested main push is eligible.
+permissions:
+  contents: read
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+jobs:
+  release:
+    if: >-
+      github.repository == 'himomohi/jev-skill-router' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Validate tested commit and release eligibility
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/build_release.py prepare --sha "$RELEASE_SHA"
+      - name: Install pinned packaging tools
+        if: steps.release.outputs.publish_needed == 'true'
+        run: python -m pip install 'build==1.2.2.post1' 'setuptools==80.9.0' 'wheel==0.45.1'
+      - name: Build reproducible packages and checksums
+        if: steps.release.outputs.publish_needed == 'true'
+        run: python scripts/build_release.py build --sha "$RELEASE_SHA"
+      - name: Verify or publish the immutable version
+        if: steps.release.outputs.publish_needed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/build_release.py publish --sha "$RELEASE_SHA"

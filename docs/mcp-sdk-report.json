@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-22T16:08:35.370795+00:00",
+  "success": true,
+  "client": "official-modelcontextprotocol-python-sdk",
+  "sdk_version": "1.30.0",
+  "transport": "stdio-subprocess",
+  "protocol_version": "2025-06-18",
+  "server_version": "0.4.0",
+  "python_version": "3.12.14",
+  "elapsed_seconds": 0.392362,
+  "checks": [
+    "initialize",
+    "server_instructions",
+    "tools_list",
+    "tool_result_success",
+    "offline_route_no_api",
+    "selected_skill",
+    "pagination_exercised",
+    "continuation_offset",
+    "all_pages_reconstruct_utf8_source",
+    "path_traversal_rejected",
+    "continuation_without_digest_rejected",
+    "ping_after_errors",
+    "warm_cache_after_errors"
+  ],
+  "pages_read": 4,
+  "api_requests": 0,
+  "credentials_read": false,
+  "isolated_temporary_profile": true,
+  "desktop_host_tested": false,
+  "live_jev_tested": false,
+  "limitations": [
+    "Official SDK client interoperability only; no Codex, Claude Code or Cursor desktop flow was executed.",
+    "Offline fixture selection exercises real stdio and file reads, not live Jev inference."
+  ]
+}

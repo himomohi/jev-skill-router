@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "tested_date": "2026-09-22",
+  "os": "Linux",
+  "server_version": "0.4.0",
+  "checks": [
+    {
+      "client": "codex",
+      "available": true,
+      "model_calls": 0,
+      "live_jev_checked": false,
+      "host_model_task_checked": false,
+      "profile": "disposable temporary directory",
+      "version": "codex-cli 0.155.1",
+      "registration_verified": true,
+      "repeat_preserved_config": true,
+      "host_connection_checked": true,
+      "host_connection_method": "Codex app-server mcpServerStatus/list",
+      "status": "passed",
+      "protocol_roundtrip_verified": true
+    },
+    {
+      "client": "claude",
+      "available": true,
+      "model_calls": 0,
+      "live_jev_checked": false,
+      "host_model_task_checked": false,
+      "profile": "disposable temporary directory",
+      "version": "2.1.278 (Claude Code)",
+      "registration_verified": true,
+      "repeat_preserved_config": true,
+      "host_connection_checked": true,
+      "host_connection_method": "Claude mcp get connection status",
+      "status": "passed",
+      "protocol_roundtrip_verified": true
+    }
+  ],
+  "limitations": [
+    "Host CLI registration and connection only; model-driven tool use and final task success are not tested.",
+    "The route roundtrip is a separate direct subprocess check, not a Codex or Claude model task.",
+    "Cursor UI and OS keychains are not tested."
+  ]
+}

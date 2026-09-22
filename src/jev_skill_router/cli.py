@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 from .config import Config,RouterError,config_path
+from . import __version__
 from .router import Router
 
 def output(value):
@@ -12,11 +13,17 @@ def output(value):
 
 def parser():
     p=argparse.ArgumentParser(prog='jev-skills',description='External skill catalog + Jev routing + read-only MCP')
+    p.add_argument('--version',action='version',version='%(prog)s '+__version__)
     p.add_argument('--config',type=Path,default=config_path())
     commands=p.add_subparsers(dest='command',required=True)
     setup=commands.add_parser('setup');setup.add_argument('--root',action='append',required=True)
-    setup.add_argument('--offline',action='store_true');setup.add_argument('--client',choices=['claude','codex','cursor'])
+    modes=setup.add_mutually_exclusive_group()
+    modes.add_argument('--offline',action='store_true')
+    modes.add_argument('--live',action='store_true',help='Explicitly switch an existing setup to live mode')
+    setup.add_argument('--client',choices=['claude','codex','cursor'])
     setup.add_argument('--hook',action='store_true',help='Opt-in Claude Code UserPromptSubmit hook')
+    setup.add_argument('--candidate-strategy',choices=['all','indexed'],help='Explicit local candidate retrieval; all preserves complete catalog evaluation')
+    setup.add_argument('--candidate-limit',type=int,help='Maximum metadata candidates in indexed mode (8–512; default 64)')
     commands.add_parser('auth');commands.add_parser('serve');commands.add_parser('config-snippet')
     benchmark=commands.add_parser('benchmark');benchmark.add_argument('--skill',help='Optional unique skill name or ID to include the same selected body on both sides')
     doctor=commands.add_parser('doctor');doctor.add_argument('--live',action='store_true')
@@ -24,6 +31,9 @@ def parser():
     route=commands.add_parser('route');route.add_argument('task');route.add_argument('--context',default='')
     plan=commands.add_parser('plan',help='Check fresh-route request bounds without credentials or API calls')
     plan.add_argument('task');plan.add_argument('--context',default='')
+    for command in (route,plan):
+        command.add_argument('--candidate-strategy',choices=['all','indexed'],help='Override candidate strategy for this invocation without changing config')
+        command.add_argument('--candidate-limit',type=int,help='Override candidate limit for this invocation')
     read=commands.add_parser('read');read.add_argument('skill_id');read.add_argument('--path',default='SKILL.md');read.add_argument('--offset',type=int,default=0)
     read.add_argument('--expected-digest',help='content_digest from the previous page; required with --offset greater than zero')
     commands.add_parser('hook')
@@ -51,7 +61,12 @@ def main(argv=None):
             if args.hook and args.client!='claude': raise RouterError('--hook requires --client claude')
             roots=[str(Path(x).expanduser().absolute()) for x in args.root]
             cfg=Config.load(args.config) if args.config.exists() else Config()
-            cfg.roots=list(dict.fromkeys(cfg.roots+roots));cfg.mode='offline' if args.offline else 'live'
+            cfg.roots=list(dict.fromkeys(cfg.roots+roots))
+            if args.offline:cfg.mode='offline'
+            elif args.live:cfg.mode='live'
+            if args.candidate_strategy is not None:cfg.candidate_strategy=args.candidate_strategy
+            if args.candidate_limit is not None:cfg.candidate_limit=args.candidate_limit
+            cfg.validate()
             catalog=Catalog(cfg.roots,cfg.max_catalog_skills)
             if not catalog.skills: raise RouterError('No valid SKILL.md files found. Check the root before setup.')
             cfg.save(args.config)
@@ -68,6 +83,10 @@ def main(argv=None):
             from .migration import restore
             output(restore(args.manifest,args.apply));return 0
         cfg=Config.load(args.config)
+        if args.command in {'route','plan'}:
+            if args.candidate_strategy is not None:cfg.candidate_strategy=args.candidate_strategy
+            if args.candidate_limit is not None:cfg.candidate_limit=args.candidate_limit
+            cfg.validate()
         if args.command=='benchmark':
             from .measurement import measure
             output(measure(cfg,args.skill));return 0

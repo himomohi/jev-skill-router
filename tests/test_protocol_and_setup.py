@@ -1,7 +1,9 @@
 import json
 import os
+import queue
 import subprocess
 import sys
+import threading
 from pathlib import Path
 import pytest
 from jev_skill_router.config import Config,RouterError
@@ -28,9 +30,22 @@ def test_real_subprocess_stdio(skill_root,tmp_path):
     config=tmp_path/'config.json';Config(roots=[str(skill_root)],mode='offline').save(config)
     messages=[request('initialize',{'protocolVersion':'2025-06-18'}),{'jsonrpc':'2.0','method':'notifications/initialized'},request('tools/list',id=2),request('tools/call',{'name':'skill_router','arguments':{'action':'route','task':'Debug Python'}},id=3)]
     env={**os.environ,'PYTHONPATH':str(ROOT/'src')}
-    process=subprocess.run([sys.executable,'-m','jev_skill_router','--config',str(config),'serve'],input='\n'.join(json.dumps(m) for m in messages)+'\n',capture_output=True,text=True,env=env,timeout=15)
-    assert process.returncode==0 and process.stderr==''
-    responses=[json.loads(x) for x in process.stdout.splitlines()]
+    process=subprocess.Popen([sys.executable,'-m','jev_skill_router','--config',str(config),'serve'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,env=env)
+    received=queue.Queue()
+    def read_responses():
+        for line in process.stdout:received.put(json.loads(line))
+    reader=threading.Thread(target=read_responses,daemon=True);reader.start()
+    try:
+        process.stdin.write('\n'.join(json.dumps(m) for m in messages)+'\n');process.stdin.flush()
+        # EOF means the client disconnected and cancels unfinished calls. Wait
+        # for the tool result while the actual stdio session is still open.
+        responses=[received.get(timeout=15) for _ in range(3)]
+        process.stdin.close();process.wait(timeout=15)
+        assert process.returncode==0 and process.stderr.read()==''
+    finally:
+        if process.poll() is None:process.kill();process.wait()
+        reader.join(5)
+        for stream in (process.stdin,process.stdout,process.stderr):stream.close()
     assert [r['id'] for r in responses]==[1,2,3]
     content=json.loads(responses[-1]['result']['content'][0]['text'])
     assert content['selected'][0]['name']=='python-debug'

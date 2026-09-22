@@ -2,6 +2,18 @@
 
 [English](CHANGELOG.md) | [한국어](CHANGELOG.ko.md)
 
+## 0.4.0 — 2026-09-22
+
+[Update notes and upgrade instructions](docs/updates/v0.4.0.md) · [한국어 업데이트 안내](docs/updates/v0.4.0.ko.md)
+
+- Handle active/queued MCP cancellation with a responsive reader, bounded tool queue and one owner for router/HTTP state. Cancelled calls do not emit results; EOF cancels pending work and closes the pool.
+- Add explicit metadata-indexed candidate narrowing, cutoff/scope diagnostics and zero-spend rejection on empty retrieval. Default full-catalog routing and Jev verification gates remain. Add per-call plan/route overrides and a reproducible 4,096-skill request-planning comparison.
+- Add a configuration-preserving guided upgrade with installed-version verification, idempotent host registration, explicit Codex environment-key forwarding, mode-preserving setup, `setup --live`, and `--version`.
+- Add 96 authored EN/KO challenge cases, two independent lexical baselines, production candidate-retention checks and capped paired live comparison tooling. Publish local baseline data without claiming live Jev accuracy.
+- Verify official MCP SDK 1.30.0 stdio interoperability and actual Codex CLI 0.155.1 / Claude Code 2.1.278 registration and connection in disposable profiles. Model-driven host tasks remain unverified.
+- Add tested-SHA GitHub release automation with aligned bilingual version documents, wheel/sdist/source ZIP, SHA256SUMS and create-only, resumable publication.
+- Update context accounting for retrieval metadata: 200 synthetic skills use 58,088 versus 4,940 UTF-8 bytes (91.50% reduction); five skills add 27.28% overhead. This is not a token, price or speed result.
+
 ## 0.3.0 — 2026-09-22
 
 [Update notes and upgrade instructions](docs/updates/v0.3.0.md) · [한국어 업데이트 안내](docs/updates/v0.3.0.ko.md)

@@ -10,7 +10,9 @@ A small, local Python service reads your trusted `SKILL.md` library, asks [TypeS
 
 **Python 3.11+ · Claude Code / Codex / Cursor adapters · English + Korean docs · MIT**
 
-**0.3.0 update:** [What's changed and how to upgrade](docs/updates/v0.3.0.md) · [Changelog](CHANGELOG.md)
+**0.4.0 update:** [What's changed and how to upgrade](docs/updates/v0.4.0.md) · [Changelog](CHANGELOG.md)
+
+MCP cancellation, explicit large-catalog retrieval, configuration-preserving upgrades and tested-version release assets are now included. [96-case comparison](docs/COMPARATIVE_EVALUATION.md) · [Scale and recall tradeoffs](docs/SCALING.md) · [Validation](docs/VALIDATION.md). Real Codex/Claude registration and MCP connections passed; live model task quality remains unmeasured.
 
 [![Context comparison: synthetic skill-related UTF-8 payload, not model tokens](docs/media/poster.en.png)](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.en.mp4)
 
@@ -101,10 +103,10 @@ The default returns at most **one** skill; set `max_skills` to 2 or 3 for broade
 
 | Skills | Progressive baseline: metadata + selected body | Router: interface + call + bookkeeping + same body | Reduction |
 | ---: | ---: | ---: | ---: |
-| 5 | 3,878 | 4,843 | -24.88% |
-| 50 | 16,388 | 4,844 | 70.44% |
-| 200 | 58,088 | 4,845 | 91.66% |
-| 500 | 141,488 | 4,845 | 96.58% |
+| 5 | 3,878 | 4,936 | -27.28% |
+| 50 | 16,388 | 4,938 | 69.87% |
+| 200 | 58,088 | 4,940 | 91.50% |
+| 500 | 141,488 | 4,940 | 96.51% |
 
 **Five skills are worse, not better:** the extra interface outweighs a tiny inventory. The benefit grows with catalog size and description length. Large conversation histories, large selected bodies, already-deferred discovery, and repeated MCP calls change the overall result. Cached metadata can also be cheap; less context does not guarantee a smaller bill or faster task completion.
 

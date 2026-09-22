@@ -16,6 +16,12 @@ Noul fit >= 0.65, Score usefulness >= 1.5 on a 0–2 rubric, and Score confidenc
 
 If candidates fail the fit/usefulness gates, return `no_match`. A useful but low-confidence candidate produces `uncertain` if nothing else passes. Errors are explicit and never enable offline mode. The internal no-match Choice option helps ranking, but the verification stage is still executed to avoid turning first-stage rejection into a false guarantee.
 
+## Optional local candidate retrieval
+
+`candidate_strategy=all` remains the default. With explicit `indexed`, catalogs larger than `candidate_limit` (64 by default) use a cached metadata-only BM25 inverted index. NFKC normalization and CJK bigrams support lexical matching; this is not translation or semantic recall. A catalog fingerprint change rebuilds the index. Bodies never enter this retrieval index. Names and content hashes provide stable tie ordering, with IDs as a final duplicate tie-breaker.
+
+Only retained candidates reach normal Jev ranking and fit/confidence verification. Results disclose the considered count, excluded scope and cutoff ties. Zero overlap stops locally before credentials or HTTP; it is not a semantic no-match verdict. Small catalogs stay complete. Use `all` when complete-catalog semantic consideration is required. Discovery still scans the complete filesystem catalog.
+
 ## Bounds and caching
 
 Config fields and validation live in `src/jev_skill_router/config.py`. Notable defaults: focused state <= 6,000 encoded bytes; complete Jev request <= 24,000 encoded bytes; shortlist 3 per shard; 32 actual HTTP attempts per route including retries; at most 3 concurrent requests; 4,096 indexed skills; 12,000 returned instruction characters per route; two retries for selected transient statuses; 15 seconds per complete HTTP request; 45 seconds of overall routing budget.
@@ -38,7 +44,7 @@ Every read also returns `content_digest`, the SHA-256 of decoded UTF-8 text (an 
 
 Malformed/deeply nested JSON and invalid Unicode frames return sanitized errors without terminating the stdio session. Oversized frames still terminate because stream resynchronization is not guaranteed. Responses use JSON Unicode escapes on the wire; decoded tool content preserves the original Unicode.
 
-The stdio server handles requests serially. MCP cancellation notifications do not interrupt an active route; it runs until completion or its configured deadline. The HTTP cancellation guarantees above apply to errors/deadlines inside the router, not to host cancellation notifications.
+The stdio reader remains responsive during tool work. A single worker owns the Router, cache and HTTP event loop; at most 16 tool requests (including the active request) are accepted. MCP `notifications/cancelled` interrupts active HTTP/retry waits or removes queued work. Cancelled requests emit no result, and unknown or malformed cancellations are ignored. Ping remains responsive, a later route can reuse the client, and EOF cancels pending work and closes the pool on its owning worker. Local filesystem/CPU work still cooperates at phase boundaries; accepted provider work may be billed despite cancellation.
 
 No shell-execution API is exposed by the router. No call uninstalls plugins or changes approval policies. Setup registers the MCP entry and, for Claude/Codex, one small bridge. The optional Claude hook receives the user prompt and injects the same selected content before the main model request; the bridge tells the model not to route twice for the same task.
 
@@ -71,6 +77,7 @@ The synchronous router owns a persistent asynchronous HTTP pool and event loop. 
 | `catalog.py` | Discovery, metadata parsing, safe bounded text reads |
 | `jev.py` | Actual REST shape, pooling, retries, response validation |
 | `router.py` | Sharding, ranking, verification, abstention, cache |
+| `retrieval.py` | Explicit metadata-only candidate narrowing and cutoff diagnostics |
 | `evidence.py` | Candidate-only evidence sampling and conservative JSON byte bounds |
 | `windows_metadata.py` | Optional NTFS/ReFS native change-time query with full-read fallback |
 | `mcp.py` | Static tool, JSON-RPC stdio protocol |

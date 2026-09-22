@@ -9,11 +9,12 @@ import re
 import shutil
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 ALLOW={'.gitignore','.github','src','tests','docs','scripts','examples','video','README.md','README.ko.md',
-       'pyproject.toml','LICENSE','SECURITY.md','CONTRIBUTING.md','CHANGELOG.md','Install.py','Install.cmd','Install.command'}
+       'pyproject.toml','LICENSE','SECURITY.md','CONTRIBUTING.md','CHANGELOG.md','CHANGELOG.ko.md','Install.py','Install.cmd','Install.command'}
 SECRET_PATTERNS=[re.compile(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'),
                  re.compile(r'\bgh[pousr]_[A-Za-z0-9]{30,}\b'),
                  re.compile(r'\bgithub_pat_[A-Za-z0-9_]{40,}\b'),
@@ -30,8 +31,12 @@ def main()->int:
     visibility.add_argument('--public',action='store_true')
     visibility.add_argument('--private',action='store_true')
     parser.add_argument('--name',default='jev-skill-router')
-    parser.add_argument('--release',action='store_true',help='Also publish included video previews as v0.1.0 release assets')
+    parser.add_argument('--release',action='store_true',help='Also create a release for the current source version, including historical video previews')
     args=parser.parse_args()
+    version=tomllib.loads((ROOT/'pyproject.toml').read_text(encoding='utf-8'))['project']['version']
+    notes=ROOT/f'docs/updates/v{version}.md'
+    if args.release and (not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',version) or not notes.is_file()):
+        parser.error('Current version release notes are required before publication.')
     if not re.fullmatch(r'[A-Za-z0-9_.-]{1,100}',args.name):parser.error('Invalid repository name')
     if not shutil.which('git') or not shutil.which('gh'):parser.error('Install Git and GitHub CLI, then run gh auth login.')
     run(['gh','auth','status'])
@@ -83,8 +88,9 @@ def main()->int:
     if args.release:
         assets=[str(p.relative_to(ROOT)) for p in sorted((ROOT/'docs/media').glob('*.mp4'))]
         if not assets:parser.error('No video files are present for the release.')
-        release=run(['gh','release','create','v0.1.0',*assets,'--repo',target,
-                     '--title','Jev Skill Router 0.1.0','--notes-file','CHANGELOG.md'])
+        sha=run(['git','rev-parse','HEAD']).stdout.strip()
+        release=run(['gh','release','create',f'v{version}',*assets,'--repo',target,'--target',sha,
+                     '--title',f'Jev Skill Router {version}','--notes-file',str(notes)])
         print(release.stdout)
     print('Published repository:',f'https://github.com/{target}')
     return 0

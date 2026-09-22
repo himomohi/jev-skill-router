@@ -3,6 +3,7 @@ import asyncio
 import inspect
 import json
 import math
+import threading
 import time
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
@@ -53,14 +54,86 @@ def validate_response(data: object, questions: dict) -> dict:
                 raise RouterError("Invalid Jev score")
     return data
 
+class RoutingCancelled(RouterError):
+    """A host cancelled the route; request data is never included in the error."""
+
+    def __init__(self):
+        super().__init__('Routing cancelled; no skill was loaded')
+
+
+class CancellationToken:
+    """Thread-safe cancellation bridge into the HTTP client's owning event loop.
+
+    Cancelling never runs or closes the HTTP pool from the transport thread.
+    CPU/file work cooperates at RequestBudget checkpoints; active HTTP awaits
+    are interrupted immediately through the registered asyncio task.
+    """
+
+    def __init__(self):
+        self._event = threading.Event()
+        self._lock = threading.Lock()
+        self._tasks = {}
+
+    @property
+    def cancelled(self) -> bool:
+        return self._event.is_set()
+
+    def check(self) -> None:
+        if self.cancelled:
+            raise RoutingCancelled()
+
+    def cancel(self) -> None:
+        with self._lock:
+            if self.cancelled:
+                return
+            self._event.set()
+            tasks = list(self._tasks.items())
+        for task, loop in tasks:
+            try:
+                loop.call_soon_threadsafe(task.cancel)
+            except RuntimeError:
+                # Completion/loop close can race with host cancellation.
+                pass
+
+    def _bind(self, task, loop) -> None:
+        with self._lock:
+            self.check()
+            self._tasks[task] = loop
+
+    def _unbind(self, task) -> None:
+        with self._lock:
+            self._tasks.pop(task, None)
+
+
+async def _with_cancellation(operation, token: CancellationToken):
+    task = asyncio.current_task()
+    try:
+        token._bind(task, asyncio.get_running_loop())
+    except BaseException:
+        operation.close()
+        raise
+    try:
+        result = await operation
+        token.check()
+        return result
+    except asyncio.CancelledError:
+        token.check()
+        raise
+    finally:
+        token._unbind(task)
+
+
 @dataclass
 class RequestBudget:
     """Shared deadline and actual HTTP-attempt allowance for one route."""
     limit: int
     deadline: float
     used: int = 0
+    cancellation: CancellationToken | None = None
 
     def remaining(self) -> float:
+        if self.cancellation is not None:
+            self.cancellation.check()
         remaining = self.deadline - time.monotonic()
         if remaining <= 0:
             raise RouterError("Overall routing deadline exceeded; no skill was loaded")
@@ -88,10 +161,12 @@ class JevClient:
         self._metrics={key:0 for key in ('api_calls','http_requests','retry_requests','request_bytes','input_tokens','output_tokens','unreported_requests')}
         self._closed=False
 
-    def _run(self, coroutine):
+    def _run(self, coroutine, *, cancellation=None):
         try:
             asyncio.get_running_loop()
         except RuntimeError:
+            if cancellation is not None:
+                coroutine = _with_cancellation(coroutine, cancellation)
             return self.runner.run(coroutine)
         coroutine.close()
         raise RouterError("Use asyncio.to_thread for the synchronous router inside an async host")
@@ -107,10 +182,10 @@ class JevClient:
 
     def ask(self,state:dict,questions:dict,*,budget:RequestBudget|None=None)->dict:
         budget=budget or RequestBudget(self.config.max_api_calls,time.monotonic()+self.config.route_timeout_seconds)
-        return self._run(self._ask(state,questions,budget))
+        return self._run(self._ask(state,questions,budget),cancellation=budget.cancellation)
 
     def ask_many(self,state:dict,batches:list[dict],*,budget:RequestBudget)->list[dict]:
-        return self._run(self._ask_many(state,batches,budget))
+        return self._run(self._ask_many(state,batches,budget),cancellation=budget.cancellation)
 
     async def _ask_many(self,state,batches,budget):
         semaphore=asyncio.Semaphore(self.config.max_concurrency)

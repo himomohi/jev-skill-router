@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "method": "synthetic local fresh-route preflight; short bodies and identical metadata",
+  "api_requests": 0,
+  "credentials_read": false,
+  "candidate_limit": 64,
+  "description_characters": 236,
+  "limitations": [
+    "Bounds are planned requests, not measured live usage, latency, cost or accuracy.",
+    "Identical metadata intentionally creates cutoff ties; lexical ranking does not establish relevance.",
+    "Indexed mode evaluates only retrieved candidates and can miss useful skills, especially across languages.",
+    "Catalog discovery still scans all files; this bounds provider candidates, not filesystem work."
+  ],
+  "results": [
+    {
+      "skills": 200,
+      "strategies": {
+        "all": {
+          "ready": true,
+          "rank_requests": 3,
+          "verification_requests_upper_bound": 1,
+          "base_requests_upper_bound": 4,
+          "http_requests_upper_bound": 12,
+          "http_request_limit": 32,
+          "retrieval": {
+            "strategy": "all",
+            "considered_skills": 200,
+            "index_applied": false,
+            "truncated": false
+          }
+        },
+        "indexed": {
+          "ready": true,
+          "rank_requests": 1,
+          "verification_requests_upper_bound": 1,
+          "base_requests_upper_bound": 2,
+          "http_requests_upper_bound": 6,
+          "http_request_limit": 32,
+          "retrieval": {
+            "strategy": "indexed",
+            "considered_skills": 64,
+            "index_applied": true,
+            "truncated": true,
+            "index_version": "metadata-bm25-v1",
+            "matched_skills": 200,
+            "cutoff_ties": 136,
+            "scope": "Only retrieved candidates are evaluated; lexical retrieval can miss relevant skills."
+          }
+        }
+      }
+    },
+    {
+      "skills": 500,
+      "strategies": {
+        "all": {
+          "ready": true,
+          "rank_requests": 6,
+          "verification_requests_upper_bound": 1,
+          "base_requests_upper_bound": 7,
+          "http_requests_upper_bound": 21,
+          "http_request_limit": 32,
+          "retrieval": {
+            "strategy": "all",
+            "considered_skills": 500,
+            "index_applied": false,
+            "truncated": false
+          }
+        },
+        "indexed": {
+          "ready": true,
+          "rank_requests": 1,
+          "verification_requests_upper_bound": 1,
+          "base_requests_upper_bound": 2,
+          "http_requests_upper_bound": 6,
+          "http_request_limit": 32,
+          "retrieval": {
+            "strategy": "indexed",
+            "considered_skills": 64,
+            "index_applied": true,
+            "truncated": true,
+            "index_version": "metadata-bm25-v1",
+            "matched_skills": 500,
+            "cutoff_ties": 436,
+            "scope": "Only retrieved candidates are evaluated; lexical retrieval can miss relevant skills."
+          }
+        }
+      }
+    },
+    {
+      "skills": 2000,
+      "strategies": {
+        "all": {
+          "ready": true,
+          "rank_requests": 24,
+          "verification_requests_upper_bound": 4,
+          "base_requests_upper_bound": 28,
+          "http_requests_upper_bound": 32,
+          "http_request_limit": 32,
+          "retrieval": {
+            "strategy": "all",
+            "considered_skills": 2000,
+            "index_applied": false,
+            "truncated": false
+          }
+        },
+        "indexed": {
+          "ready": true,
+          "rank_requests": 1,
+          "verification_requests_upper_bound": 1,
+          "base_requests_upper_bound": 2,
+          "http_requests_upper_bound": 6,
+          "http_request_limit": 32,
+          "retrieval": {
+            "strategy": "indexed",
+            "considered_skills": 64,
+            "index_applied": true,
+            "truncated": true,
+            "index_version": "metadata-bm25-v1",
+            "matched_skills": 2000,
+            "cutoff_ties": 1936,
+            "scope": "Only retrieved candidates are evaluated; lexical retrieval can miss relevant skills."
+          }
+        }
+      }
+    },
+    {
+      "skills": 4096,
+      "strategies": {
+        "all": {
+          "ready": false,
+          "rank_requests": 49,
+          "verification_requests_upper_bound": 9,
+          "base_requests_upper_bound": 58,
+          "http_requests_upper_bound": 32,
+          "http_request_limit": 32,
+          "retrieval": {
+            "strategy": "all",
+            "considered_skills": 4096,
+            "index_applied": false,
+            "truncated": false
+          }
+        },
+        "indexed": {
+          "ready": true,
+          "rank_requests": 1,
+          "verification_requests_upper_bound": 1,
+          "base_requests_upper_bound": 2,
+          "http_requests_upper_bound": 6,
+          "http_request_limit": 32,
+          "retrieval": {
+            "strategy": "indexed",
+            "considered_skills": 64,
+            "index_applied": true,
+            "truncated": true,
+            "index_version": "metadata-bm25-v1",
+            "matched_skills": 4096,
+            "cutoff_ties": 4032,
+            "scope": "Only retrieved candidates are evaluated; lexical retrieval can miss relevant skills."
+          }
+        }
+      }
+    }
+  ]
+}

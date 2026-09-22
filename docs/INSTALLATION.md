@@ -40,7 +40,7 @@ jev-skills auth
 jev-skills doctor --live
 ```
 
-Configuration defaults to `~/.jev-skill-router/config.json`. Set `JEV_SKILLS_HOME` or use `jev-skills --config /path/config.json COMMAND` to isolate profiles. The global `--config` flag goes **before** the subcommand. Running setup without `--offline` chooses live mode; no key is written into config JSON.
+Configuration defaults to `~/.jev-skill-router/config.json`. Set `JEV_SKILLS_HOME` or use `jev-skills --config /path/config.json COMMAND` to isolate profiles. The global `--config` flag goes **before** the subcommand. Fresh setup defaults to live mode. Repeating setup preserves the existing mode; use `--live` or `--offline` to switch explicitly. No key is written into config JSON.
 
 ## Routing limits
 
@@ -54,6 +54,8 @@ Existing configuration files use the defaults for new fields. Adjust these field
 | `max_api_calls` | 32 | Actual HTTP attempts per route, **including retries** |
 | `excerpt_chars` | 900 | Total evidence characters per skill, sampled across long bodies |
 | `cache_seconds` | 180 | Exact repeated-decision lifetime in one process |
+| `candidate_strategy` | `all` | Complete catalog or explicit `indexed` lexical narrowing |
+| `candidate_limit` | 64 | Maximum retained metadata candidates when indexing applies (8–512) |
 
 Retrying consumes the same request allowance; missing usage remains unknown. Local filesystem work is checked between phases, so a blocked filesystem can exceed the time budget. Lower concurrency if the provider returns rate limits. [Real workload evaluation](EVALUATION.md) records accuracy, delays and every attempted request before you decide whether routing helps.
 
@@ -140,3 +142,38 @@ The hook starts a separate process on each prompt. Its cache and HTTP pool do no
 Rerun installation to update the private environment. The example library is copied only when absent, so rerunning does not overwrite edited examples. A client may reject duplicate registration; inspect `claude mcp list`, `codex mcp list`, or Cursor's MCP settings. Remove only the `jev-skills` entry before rerunning registration, or use `config-snippet` to inspect the intended command. Existing customized bridge files are not overwritten.
 
 For removal, restore parked skills **first**, remove the `jev-skills` MCP entry through the host's normal interface, remove only the managed hook command and unchanged bridge, then remove the app runtime directory when it no longer contains needed vaults/manifests. Do not delete the whole data directory while skills are still parked there. Remove the stored `jev-skill-router` key from the operating system's credential manager when no longer needed.
+
+## Upgrade an existing guided installation
+
+Download the new source archive or update this checkout, then run:
+
+```bash
+python Install.py --upgrade --non-interactive
+# For core-only installations using environment credentials:
+python Install.py --upgrade --non-interactive --no-keychain
+jev-skills --version
+```
+
+Use the same `JEV_SKILLS_HOME` as the original installation. The upgrade verifies the installed package version and runs local diagnostics. It preserves config bytes, roots, routing mode, credentials, client registration and custom launchers; it does not rerun setup/authentication. Restart the host session. An existing configuration makes a fresh installation stop with an upgrade instruction. `--verify` explicitly adds one live diagnostic request.
+
+For a pip-managed environment, run `python -m pip install --upgrade '.[secure]'` from the new checkout. Use the same interpreter/environment as before. Repeated host registration with the same command is idempotent; a conflicting entry is preserved and reported.
+
+## Large catalogs
+
+```bash
+jev-skills plan "Inspect specialist operation" --candidate-strategy indexed --candidate-limit 64
+jev-skills route "Inspect specialist operation" --candidate-strategy indexed --candidate-limit 64
+```
+
+These flags apply only to this invocation. Persist them with `setup --root PATH --candidate-strategy indexed --candidate-limit 64`, or edit your config. The default `all` considers the complete catalog. Indexed mode can miss useful skills, particularly when the task and descriptions use different languages; an empty retrieval stops before any Jev request. Read `retrieval` in the plan/result, including cutoff ties. It is not a model confidence score. [Request-scaling evidence](SCALING.md).
+
+## Check installed host CLIs
+
+From the same Python environment as the installed router:
+
+```bash
+python scripts/check_host.py --client codex
+python scripts/check_host.py --client claude
+```
+
+The checks use disposable host profiles, confirm idempotent registration and real MCP discovery/connection, and make no model/API calls. The direct router roundtrip is separate from host model-driven tool use. [Recorded connection evidence](host-connection-report.json).

@@ -8,7 +8,7 @@ from collections import OrderedDict
 from .catalog import Catalog,Skill
 from .config import Config,RouterError,api_key
 from .evidence import excerpt, excerpt_byte_bound
-from .jev import JevClient,RequestBudget,encoded
+from .jev import CancellationToken,JevClient,RequestBudget,encoded
 
 NONE='__none__'
 RANK_INSTRUCTIONS=('Which skill is most useful for the task? Rank only by actual capability. '
@@ -83,10 +83,32 @@ class Router:
         return bounds,groups
     def _live_plan(self,state):
         """One shared preflight for diagnostics and actual routing, without credentials."""
-        skills=list(self.catalog.skills.values())
+        skills,retrieval=self._candidate_pool(state)
         batches=self._pack(skills,state,self.rank_questions)
         bounds,groups=self._verification_plan(batches,state)
-        return batches,bounds,groups
+        return batches,bounds,groups,retrieval
+
+    def _candidate_pool(self,state):
+        skills=list(self.catalog.skills.values())
+        details={'strategy':self.config.candidate_strategy,'considered_skills':len(skills),
+                 'index_applied':False,'truncated':False}
+        # Small catalogs retain complete semantic evaluation even in indexed mode.
+        if self.config.candidate_strategy=='all' or len(skills)<=self.config.candidate_limit:
+            return skills,details
+        from .retrieval import MetadataIndex,INDEX_VERSION
+        cached=getattr(self,'_metadata_index',None)
+        if cached is None or cached[0]!=self.catalog.fingerprint:
+            cached=(self.catalog.fingerprint,MetadataIndex(skills))
+            self._metadata_index=cached
+        found=cached[1].search(state['task']+'\n'+state['recent_context'],self.config.candidate_limit)
+        if not found.ids:
+            raise RouterError("The local metadata index found no candidates. No Jev request was sent; use candidate_strategy=all or include terms used by the skills. This is not a semantic no-match decision.")
+        selected=[self.catalog.skills[sid] for sid in found.ids]
+        details.update(index_applied=True,index_version=INDEX_VERSION,
+                       considered_skills=len(selected),matched_skills=found.matched_count,
+                       truncated=len(selected)<len(skills),cutoff_ties=found.cutoff_ties,
+                       scope='Only retrieved candidates are evaluated; lexical retrieval can miss relevant skills.')
+        return selected,details
 
     @staticmethod
     def _state(task,context):
@@ -111,6 +133,7 @@ class Router:
                 'http_request_limit':self.config.max_api_calls,'retries_per_request':self.config.retries,
                 'max_concurrency':self.config.max_concurrency,'route_timeout_seconds':self.config.route_timeout_seconds,
                 'http_requests':0,'credentials_checked':False,
+                'candidate_strategy':self.config.candidate_strategy,'candidate_limit':self.config.candidate_limit,
                 'scope':'Fresh-route request bounds, excluding cache hits. No authentication, quality, price or latency prediction.'}
         if not self.catalog.skills or self.config.mode=='offline':
             result.update(rank_requests=0,verification_requests_upper_bound=0,
@@ -120,12 +143,12 @@ class Router:
                 result.update(ready=False,reason='No valid skills found; check roots and warnings')
             return result
         try:
-            batches,_,groups=self._live_plan(state)
+            batches,_,groups,retrieval=self._live_plan(state)
         except RouterError as e:
             result.update(ready=False,reason=str(e))
             return result
         calls=len(batches)+len(groups)
-        result.update(rank_requests=len(batches),verification_requests_upper_bound=len(groups),
+        result.update(retrieval=retrieval,rank_requests=len(batches),verification_requests_upper_bound=len(groups),
                       base_requests_upper_bound=calls,
                       http_requests_upper_bound=min(self.config.max_api_calls,calls*(self.config.retries+1)),
                       retry_headroom_at_upper_bound=max(0,self.config.max_api_calls-calls))
@@ -134,7 +157,7 @@ class Router:
         return result
 
     def _live(self,state,budget):
-        rank_batches,bounds,verification_groups=self._live_plan(state)
+        rank_batches,bounds,verification_groups,retrieval=self._live_plan(state)
         # Reserve base calls before credentials or paid requests. Retries share
         # the runtime cap and can exhaust it; this does not promise retry capacity.
         worst_calls=len(rank_batches)+len(verification_groups)
@@ -194,7 +217,7 @@ class Router:
         return {'status':'selected' if accepted else 'uncertain' if uncertain else 'no_match',
                 'provider':'jev','models':sorted(models),'selected':accepted[:self.config.max_skills],
                 'api_calls':calls,'usage':{'input_tokens':input_tokens,'output_tokens':output_tokens} if usage_available else None,
-                'shortlisted':len(candidates),'catalog_size':len(skills)}
+                'shortlisted':len(candidates),'catalog_size':len(skills),'retrieval':retrieval}
     def _offline(self,state):
         # Explicit demonstration mode. Not Jev, not an accuracy benchmark, not semantic multilingual routing.
         words=set(re.findall(r'[\w-]+',state['task'].lower()))
@@ -208,10 +231,10 @@ class Router:
                 'selected':[{'id':sid,'fit':None,'score':None,'confidence':None} for _,sid in ranked[:self.config.max_skills]],
                 'api_calls':0,'usage':None,'catalog_size':len(self.catalog.skills),
                 'warning':'Offline keyword demonstration. No Jev inference or calibrated confidence.'}
-    def route(self,task:str,context:str='')->dict:
+    def route(self,task:str,context:str='',*,cancellation:CancellationToken|None=None)->dict:
         state=self._state(task,context)
         started=time.perf_counter()
-        budget=RequestBudget(self.config.max_api_calls,time.monotonic()+self.config.route_timeout_seconds)
+        budget=RequestBudget(self.config.max_api_calls,time.monotonic()+self.config.route_timeout_seconds,cancellation=cancellation)
         before=self.client.metrics_snapshot() if hasattr(self.client,'metrics_snapshot') else {}
         self.last_metrics={}
         result=None

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "dataset": "authored-challenge-v1",
+  "cases": 96,
+  "skills": 16,
+  "languages": {
+    "en": 48,
+    "ko": 48
+  },
+  "provenance": "Original project-authored test prompts and illustrative skill descriptions; no production conversations or third-party skill corpus.",
+  "holdout_status": "Not human-validated, independently held out, or representative of real user traffic. English/Korean pairs and prompt families are correlated.",
+  "creation_protocol": "Descriptions and task intent labels authored before benchmark results; baseline parameters fixed without tuning on these labels.",
+  "label_rule": "List the narrow skill capabilities explicitly required by the task; ordinary nontechnical requests receive an empty list. Multi-skill cases require every named capability.",
+  "license": "MIT (repository license)",
+  "categories": {
+    "direct": 32,
+    "paraphrase": 32,
+    "near-miss": 12,
+    "no-match": 12,
+    "multi-skill": 8
+  }
+}

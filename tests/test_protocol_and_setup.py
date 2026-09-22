@@ -89,7 +89,7 @@ def test_cursor_conflict_no_write(tmp_path):
     with pytest.raises(RouterError):install_client('cursor',tmp_path/'config.json',home=tmp_path)
     assert target.read_text()==old
 
-@pytest.mark.parametrize('field,value',[('min_fit',2),('max_skills',0),('shortlist',True),('mode','auto'),('roots','bad')])
+@pytest.mark.parametrize('field,value',[('min_fit',2),('max_skills',0),('shortlist',True),('mode','auto'),('roots','bad'),('max_concurrency',0),('max_concurrency',9),('max_concurrency',True),('route_timeout_seconds',0),('route_timeout_seconds',float('nan'))])
 def test_invalid_config_rejected(field,value):
     with pytest.raises(RouterError):Config(**{field:value}).validate()
 

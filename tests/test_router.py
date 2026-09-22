@@ -1,4 +1,5 @@
 import json
+import asyncio
 import httpx
 import pytest
 from jev_skill_router.config import Config,RouterError
@@ -88,3 +89,53 @@ def test_choice_criteria_use_documented_plain_descriptions(live_router,provider)
     criteria=provider.requests[0]['questions']['rank']['criteria']
     assert all(isinstance(value,str) for value in criteria.values())
     assert any('python-debug: Debug Python' in value for value in criteria.values())
+
+def test_long_body_evidence_includes_relevant_late_capability_and_tail(make_skill,tmp_path):
+    from jev_skill_router.evidence import excerpt
+    body='Introduction\n'+('general overview. '*300)+'\nSupports forensic_analysis of parquet files.\n'+('miscellaneous notes. '*100)+'\nFinal constraint: read-only.'
+    selected=excerpt(body,'forensic_analysis parquet',900)
+    assert len(selected)<=900
+    assert 'Introduction' in selected and 'parquet' in selected
+    assert 'Final constraint: read-only.' in selected
+    assert 'parquet' not in body[:900]
+    make_skill(body=body)
+    router=Router(Config(roots=[str(tmp_path/'skills')],mode='offline'))
+    skill=next(iter(router.catalog.skills.values()))
+    question=router.verify_questions([skill],'forensic_analysis parquet')['fit_0']['instructions']['skill']
+    assert question['excerpt_truncated'] and 'parquet' in question['instructions_excerpt']
+
+def test_excerpt_keeps_short_body_and_samples_without_language_overlap():
+    from jev_skill_router.evidence import excerpt
+    assert excerpt('A complete short skill.','한국어 요청',100)=='A complete short skill.'
+    body='HEAD'+('a'*996)+'MIDDLE'+('b'*990)+'TAIL'
+    sample=excerpt(body,'관련 기능을 찾아줘',200)
+    assert len(sample)<=200 and 'HEAD' in sample and 'TAIL' in sample
+    assert 'a' in sample and 'b' in sample
+
+def test_cached_latency_is_current_and_catalog_reloads_are_reported(skill_root,provider):
+    async def handle(request):
+        await asyncio.sleep(.015)
+        return provider(request)
+    cfg=Config(roots=[str(skill_root)])
+    router=Router(cfg,JevClient(cfg,'fixture-key',httpx.MockTransport(handle)))
+    try:
+        cold=router.route('Debug Python')
+        warm=router.route('Debug Python')
+        assert cold['http_requests']==2 and warm['http_requests']==0
+        assert warm['elapsed_seconds']<cold['elapsed_seconds']
+        assert warm['routing_seconds']<warm['original_routing_seconds']
+        assert router.last_metrics['http_requests']==0
+        from jev_skill_router.catalog import STAT_CACHE_SUPPORTED
+        if STAT_CACHE_SUPPORTED:
+            assert router.last_metrics['catalog_refresh']['files_reloaded']==0
+    finally:router.close()
+
+def test_error_preserves_actual_request_counts_and_never_caches(skill_root):
+    cfg=Config(roots=[str(skill_root)],retries=0)
+    router=Router(cfg,JevClient(cfg,'fixture-key',httpx.MockTransport(lambda _:httpx.Response(401))))
+    try:
+        with pytest.raises(RouterError,match='HTTP 401'):router.route('Debug Python')
+        assert router.last_metrics['http_requests']==1
+        assert router.last_metrics['unreported_requests']==1
+        assert not router.cache
+    finally:router.close()

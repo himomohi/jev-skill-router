@@ -18,6 +18,7 @@ def test_official_client_real_stdio_roundtrip(monkeypatch):
     report = asyncio.run(asyncio.wait_for(smoke.run_check(), timeout=40))
     assert report["success"] and report["api_requests"] == 0
     assert report["pages_read"] > 1
+    assert report["source_line_endings"] == "CRLF"
     assert not report["credentials_read"] and not report["desktop_host_tested"]
     assert "all_pages_reconstruct_utf8_source" in report["checks"]
     assert "path_traversal_rejected" in report["checks"]

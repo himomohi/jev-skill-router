@@ -15,7 +15,7 @@ Version **0.4.0**. This records engineering checks and measured scope; it is not
 
 | Check | Environment | Result | Scope |
 | --- | --- | --- | --- |
-| Official MCP Python SDK | 1.30.0, Python 3.12.14 | Passed | Real stdio initialize/list/route; four-page UTF-8 reconstruction; digest/traversal rejection; ping/cache reuse |
+| Official MCP Python SDK | 1.30.0, Python 3.12.14 | Passed | Real stdio initialize/list/route; four-page UTF-8/CRLF reconstruction; digest/traversal rejection; ping/cache reuse |
 | Codex CLI | 0.155.1, Linux | Passed | Disposable-profile registration, unchanged repeated registration, Codex app-server MCP discovery |
 | Claude Code | 2.1.278, Linux | Passed | Disposable-profile registration, unchanged repeated registration, actual MCP Connected status |
 
@@ -69,3 +69,5 @@ The host checks require the corresponding actual CLI on PATH and use disposable 
 현재 로컬 테스트 284개를 통과했고 Windows 전용 2개는 해당 CI 환경에서 검증합니다. 공식 MCP SDK 왕복과 실제 Codex·Claude 등록/연결을 통과했습니다. 요청 취소, 선택형 대규모 검색, 설정 보존 업데이트, 비교 평가 및 버전 일치 배포를 보강했습니다. 96개 자체 작성 사례의 로컬 기준선 결과와 후보 누락도 함께 공개합니다.
 
 실제 Jev 판단·요금·지연, 모델을 사용한 하네스 작업 성공률, Cursor UI와 OS 키체인은 아직 미검증입니다. 이 한계를 숨기고 90점이나 90% 정확도로 표시하지 않습니다.
+
+The first v0.4.0 Windows CI run exposed a newline assumption in the new SDK smoke fixture: text-mode file creation converted LF to CRLF, but its expected string still used LF. The fixture now writes explicit CRLF bytes on every platform and compares every returned page to those exact bytes decoded as UTF-8. Production read behavior was unchanged.

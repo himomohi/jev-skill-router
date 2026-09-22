@@ -34,7 +34,10 @@ async def run_check() -> dict:
         skill.mkdir(parents=True)
         text = ("---\nname: python-debug\ndescription: Debug Python traceback failures and regression tests.\n---\n\n"
                 + "Inspect traceback, reproduce the failure, then verify the fix. 한국어 전송 확인.\n" * 45)
-        (skill / "SKILL.md").write_text(text, encoding="utf-8")
+        # Write explicit CRLF bytes on every OS; text-mode writes would translate
+        # LF on Windows while the expected in-memory string still contained LF.
+        text = text.replace("\n", "\r\n")
+        (skill / "SKILL.md").write_bytes(text.encode("utf-8"))
         config_path = temporary / "profile" / "config.json"
         Config(roots=[str(skill.parent)], mode="offline", max_output_chars=1000).save(config_path)
         parameters = StdioServerParameters(
@@ -97,7 +100,7 @@ async def run_check() -> dict:
             "transport": "stdio-subprocess", "protocol_version": initialized.protocolVersion,
             "server_version": initialized.serverInfo.version, "python_version": sys.version.split()[0],
             "elapsed_seconds": round(time.perf_counter() - started, 6),
-            "checks": list(dict.fromkeys(checks)), "pages_read": len(pages),
+            "checks": list(dict.fromkeys(checks)), "pages_read": len(pages), "source_line_endings": "CRLF",
             "api_requests": 0, "credentials_read": False, "isolated_temporary_profile": True,
             "desktop_host_tested": False, "live_jev_tested": False,
             "limitations": ["Official SDK client interoperability only; no Codex, Claude Code or Cursor desktop flow was executed.",

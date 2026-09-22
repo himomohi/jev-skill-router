@@ -1,8 +1,8 @@
-# Create the GitHub repository and attach videos
+# Publishing and releases
 
-This build produced a local source bundle; the connected GitHub integration did not expose repository creation or release-asset upload. **There is no claimed remote repository or successful remote push in the validation record.**
+The public repository is [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router). [v0.1.0](https://github.com/himomohi/jev-skill-router/releases/tag/v0.1.0) provides the source ZIP and English/Korean Remotion MP4s. Updates are committed directly to `main`.
 
-The included helper performs the missing external step using your own local, authorized GitHub CLI. It needs Git, `gh`, a successful `gh auth login`, network access, and your configured Git `user.name`/`user.email`.
+To publish a separate new repository, the included create-only helper uses your own authorized GitHub CLI. It needs Git, `gh`, a successful `gh auth login`, network access, and your configured Git `user.name`/`user.email`.
 
 Review the source, documentation and media, then from the extracted root:
 
@@ -14,6 +14,6 @@ It reads the authenticated login, targets `<login>/jev-skill-router`, creates a 
 
 An existing repository, existing remote, unexpected tracked file, recognizable secret or symlink stops the helper. It does not force-push, rewrite existing history, impersonate a Git author or use another connector's credentials. A failure may leave a local commit or a newly created remote; inspect the state rather than deleting/retrying blindly. Once a repo exists, subsequent updates should use the normal Git workflow, not the create-only helper.
 
-The included `.github/workflows/test.yml` runs a small Python matrix on relevant changes. The Remotion workflow is **manual only**, not scheduled or automatically run on every push. No Actions execution has been observed until the files actually exist in a GitHub repository.
+The included `.github/workflows/test.yml` runs a small Python matrix on relevant changes. The Remotion workflow is **manual only**, not scheduled or automatically run on every push. The [Python matrix](https://github.com/himomohi/jev-skill-router/actions/runs/35685705223) and [Remotion render](https://github.com/himomohi/jev-skill-router/actions/runs/35685682423) both completed successfully.
 
-The source includes preview MP4s, not a claimed Remotion render. To replace/augment release media with actual Remotion outputs, follow [video/README.md](../video/README.md), inspect the rendered files, and upload them using your existing release workflow.
+The source includes separate preview MP4s. Release assets named `overview.en.mp4` and `overview.ko.mp4` are actual Remotion outputs. For future renders, follow [video/README.md](../video/README.md), inspect both languages, and upload the outputs to the appropriate release.

@@ -6,4 +6,4 @@ Initial source release: external SKILL.md indexing, documented TypeSafe REST int
 
 Includes dry-run parking/restore, local byte-accounting tools, opt-in EN/KO live evaluation, English/Korean documentation, guided installers, tests, Remotion source, locally rendered storyboard preview videos, and a create-only GitHub publishing helper.
 
-Local implementation validation is recorded separately. Live Jev quality, actual host integrations, Remotion rendering and GitHub publication are not claimed as completed in this build. Included MP4s are preview-renderer outputs, not real-product recordings or Remotion-rendered evidence.
+Published to [GitHub](https://github.com/himomohi/jev-skill-router) with 72 passing local tests, a successful Linux/macOS/Windows CI matrix, and actual English/Korean Remotion renders. Added LF/CRLF pagination coverage after the initial Windows CI exposed newline normalization in the test. Release assets contain Remotion `overview.*.mp4`; repository `preview.*.mp4` files remain separate storyboard previews. Live Jev quality and actual host integrations remain unverified. See [validation](docs/VALIDATION.md).

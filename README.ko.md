@@ -10,11 +10,11 @@
 
 **Python 3.11+ · Claude Code / Codex / Cursor 연결 코드 · 영어·한국어 문서 · MIT**
 
-[![합성 스킬 데이터의 UTF-8 바이트 비교: 실제 모델 토큰 수가 아닙니다](docs/media/poster.ko.png)](docs/media/preview.ko.mp4)
+[![합성 스킬 데이터의 UTF-8 바이트 비교: 실제 모델 토큰 수가 아닙니다](docs/media/poster.ko.png)](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.ko.mp4)
 
-[한국어 영상](docs/media/preview.ko.mp4) · [English video](docs/media/preview.en.mp4) · [Remotion 소스와 렌더링](video/README.md)
+[한국어 영상](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.ko.mp4) · [English video](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.en.mp4) · [Remotion 소스와 렌더링](video/README.md)
 
-> **검증 범위:** 로컬 테스트와 MCP 프로세스 연결 검증은 통과했습니다. 실제 Jev 인증·선택 품질·실제 사용자 하네스 설치는 이 제작 환경에서 검증하지 못했습니다. MP4는 로컬 미리보기 렌더러로 제작한 설명 영상이며, **Remotion으로 렌더링한 실제 제품 녹화 영상이 아닙니다.** 편집 가능한 Remotion 프로젝트와 수동 렌더링 워크플로를 함께 제공합니다. [검증 기록](docs/VALIDATION.md).
+> **검증 완료:** 로컬 테스트 72개와 Linux·macOS·Windows CI를 통과했습니다. 영어·한국어 Remotion 영상도 GitHub Actions에서 렌더링했습니다. 영상은 설계 설명용이며 실제 제품 사용 녹화는 아닙니다. 실제 Jev 인증·선택 품질·사용자 하네스 연동은 아직 검증하지 않았습니다. [검증 기록](docs/VALIDATION.md).
 
 ## 무엇이 달라지나요?
 
@@ -26,7 +26,7 @@
 
 ## 가장 쉬운 시작
 
-소스 ZIP을 풀고 **Python 3.11 이상**이 설치된 상태에서 실행합니다.
+[v0.1.0 릴리스](https://github.com/himomohi/jev-skill-router/releases/tag/v0.1.0)의 소스 ZIP을 내려받아 풀고 **Python 3.11 이상**이 설치된 상태에서 실행합니다.
 
 ```bash
 python Install.py --offline
@@ -163,7 +163,7 @@ npm run typecheck
 npm run render
 ```
 
-Remotion 직접·간접 의존성을 잠금 파일로 고정했습니다. `npm ci`로 동일한 의존성을 설치할 수 있으며, Work에서 실제 의존성을 사용한 TypeScript 검사를 통과했습니다. [영상 안내](video/README.md).
+Remotion 직접·간접 의존성을 잠금 파일로 고정했습니다. `npm ci`로 동일한 의존성을 설치할 수 있으며, GitHub Actions에서 TypeScript 검사와 영어·한국어 렌더링을 통과했습니다. [영상 안내](video/README.md).
 
 Git과 GitHub CLI를 설치하고 `gh auth login`, Git 작성자 설정, 소스 검토를 마친 뒤 저장소 루트에서 실행하면 **새 저장소 생성·푸시·포함된 MP4 릴리스 첨부**를 진행합니다.
 
@@ -171,6 +171,6 @@ Git과 GitHub CLI를 설치하고 `gh auth login`, Git 작성자 설정, 소스 
 python scripts/publish_github.py --public --release
 ```
 
-대상은 `<로그인한 계정>/jev-skill-router`입니다. 기존 저장소나 리모트가 있으면 중단하며 강제 푸시하지 않습니다. 이 제작 환경에서는 새 GitHub 저장소 생성이나 업로드를 실행하지 못했습니다. [게시 절차](docs/PUBLISHING.md).
+대상은 `<로그인한 계정>/jev-skill-router`입니다. 기존 저장소나 리모트가 있으면 중단하며 강제 푸시하지 않습니다. 현재 프로젝트는 [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router)에 게시되어 있습니다. 위 도우미는 별도의 새 저장소를 만들 때 사용합니다. [게시 절차](docs/PUBLISHING.md).
 
 [설치](docs/INSTALLATION.md) · [구조](docs/ARCHITECTURE.md) · [검증](docs/VALIDATION.md) · [MIT 라이선스](LICENSE)

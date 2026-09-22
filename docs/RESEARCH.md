@@ -32,6 +32,6 @@ Host versions evolve. Documentation-conformant configuration and local protocol 
 
 ## Media and publishing
 
-[Remotion rendering CLI](https://www.remotion.dev/docs/cli/render) is the source for the included React/Remotion project's render commands. Direct dependencies are pinned; no successful Remotion runtime was available in the build environment. The delivered MP4 previews use the separately identified Pillow/FFmpeg renderer.
+[Remotion rendering CLI](https://www.remotion.dev/docs/cli/render) is the source for the included React/Remotion project's render commands. Direct and transitive dependencies are pinned. Both languages rendered successfully in [GitHub Actions](https://github.com/himomohi/jev-skill-router/actions/runs/35685682423); release assets named `overview.*.mp4` are the Remotion output. The separately identified `preview.*.mp4` files use Pillow/FFmpeg.
 
-[GitHub repo creation](https://cli.github.com/manual/gh_repo_create) and [release creation](https://cli.github.com/manual/gh_release_create) define the publishing script's commands. The script requires the user's local authorized GitHub CLI and refuses an existing target. No remote repository was created by this build.
+[GitHub repo creation](https://cli.github.com/manual/gh_repo_create) and [release creation](https://cli.github.com/manual/gh_release_create) define the publishing script's commands. The script requires the user's local authorized GitHub CLI and refuses an existing target. The public project is [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router); the helper remains available for creating a separate new repository.

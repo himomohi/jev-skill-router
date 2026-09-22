@@ -1,71 +1,52 @@
 # Validation record — 2026-09-22
 
-This is a local implementation and artifact-validation record, **not a production certification or a live Jev benchmark**. The source is version 0.1.0. The build host ran Linux, Python 3.13.5, and Node.js 22.16.0.
+Version 0.1.0. This records implementation and artifact checks, not production certification or live Jev quality. Public repository: [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router).
 
 ## Executed checks
 
 | Check | Observed result | Boundary |
 | --- | --- | --- |
-| `python -m pytest -q` | **71 passed in 3.72 seconds** | Deterministic local tests. TypeSafe responses are HTTP fixtures, not live model answers. |
-| Package build and install | Wheel built, installed into a separate virtual environment, and imported from `site-packages` outside the source directory | HTTPX/PyYAML came from the build host's preinstalled packages through an explicit dependency path. This was not a clean online dependency installation. |
-| MCP stdio | Actual subprocess initialization, static tool listing, routing, and selected-file reading | Minimal tools-only protocol implementation, not an official MCP conformance-suite result or a real client UI test. |
-| Claude hook | Actual JSON input/output path, additional-context response, error handling and missing-config behavior | Claude Code itself was not launched. Registration and settings changes were tested using temporary paths/stubs. |
-| CSV end-to-end example | Offline selector chose `csv-profile`; the local test host ran its bundled read-only script and checked four rows, one duplicate, and missing counts `[0, 1, 2]` | No Jev call. The router did not execute the script. [Recorded result](demo-run.json). |
-| Context comparison | Reproducible, serialized UTF-8 byte counts for 5/50/200/500 synthetic skills | Not model-token, billing, latency or semantic-quality measurements. [Method](BENCHMARKS.md), [data](benchmark.json). |
-| Python compilation | `python -m compileall -q src scripts Install.py` passed | Syntax compilation is supplementary to tests. |
-| Video TypeScript | All three TSX source files passed syntax transpilation with TypeScript 5.8.3 | No dependency-backed typecheck or Remotion render was possible. |
-| Supplied preview videos | English and Korean MP4s rendered with Pillow + FFmpeg: 1280×720, 24 fps, 720 frames, 30 seconds, H.264, silent | Separate preview renderer, **not Remotion output**. Both languages' five-scene storyboards and metric posters were visually inspected. |
+| Local Python suite | **72 passed in 2.00 seconds**, Linux / Python 3.12.14 | TypeSafe responses are HTTP fixtures, not live model answers. |
+| [GitHub CI](https://github.com/himomohi/jev-skill-router/actions/runs/35685705223) | All four jobs passed: Ubuntu Python 3.11 and 3.13, macOS Python 3.12, Windows Python 3.12 | Tests and synthetic benchmark; no real desktop client or keychain session. Tested code commit `63d31214e5e827dfc0bf4e480cd85dab7ac98b6e`. |
+| Clean dependency installation | Fresh virtual environment installed `.[dev,secure]` from registry dependencies | Linux installation, not a clean Windows/macOS guided-install test. |
+| Guided installer | `Install.py --offline --non-interactive --client none --no-keychain` succeeded in a separate temporary application directory | Runtime, six example skills, launcher, non-live doctor and a Python-debug route checked. No user client configuration or native skills changed. |
+| MCP stdio and Claude hook | Actual subprocess initialization, tool listing, routing, selected-file reading, hook input/output and error paths passed | Not an official MCP conformance suite or a real host UI test. |
+| CSV example | Offline selector chose `csv-profile`; host executed the bundled read-only script and checked four rows, one duplicate, missing counts `[0, 1, 2]` | No Jev call; router does not execute scripts. [Recorded result](demo-run.json). |
+| Context comparison | Committed counts and hashes reproduced for 5/50/200/500 synthetic skills | UTF-8 bytes, not model tokens, billing, latency or routing quality. [Method](BENCHMARKS.md). |
+| [Remotion build and render](https://github.com/himomohi/jev-skill-router/actions/runs/35685682423) | `npm ci`, dependency-backed TypeScript check and both EN/KO renders succeeded | Rendered source commit `b4910f477e741ff6a573374c4f6b39b6d032aeef`; video code unchanged by later test/docs updates. |
+| Remotion video inspection | Both outputs: 1280×720, 24 fps, 720 frames; five scenes per language visually inspected | 30 seconds of video, approximately 30.06-second container duration. Conceptual animation, not a live product recording. Release files: `overview.en.mp4`, `overview.ko.mp4`. |
+| Separate previews | EN/KO Pillow + FFmpeg previews and posters inspected | Repository `preview.*.mp4` files are not Remotion outputs. |
 
-## What the tests cover
+The workflow artifact ZIP has SHA-256 `b0a61057e3821d31262d7a1fd9d8c8bcd5437aff7adf4485c58e084631e60c31`; the downloaded archive matched it.
 
-Catalog parsing, all six bundled examples, duplicate names, malformed metadata, bounded reads, symlink and path-traversal rejection, file pagination, and changed-file cache invalidation are exercised.
+## Test coverage and corrected issues
 
-The Jev adapter is tested against the documented HTTP request/response shapes, including string-valued Choice criteria, independent verification questions, unexpected answers, invalid probabilities, authentication failure, retry behavior, and bounded requests. Larger-catalog routing includes a 270-skill sharding case and request-budget preflight. These tests verify program behavior **given fixture decisions**, not whether Jev will make the right decisions.
+Catalog metadata, all six example skills, duplicates, malformed files, bounded reads, symlink/traversal rejection, exact LF/CRLF pagination, and file-hash cache invalidation are covered. Windows CI initially exposed universal-newline normalization in the pagination test's expected text. The test now writes and compares explicit LF and CRLF byte content; runtime behavior was unchanged, and all four CI jobs then passed.
 
-Routing tests cover no-match, abstention, confidence/fit gates, explicit offline-mode labeling, and repeat-call caching. Setup and migration tests cover preserved settings, dry-run versus apply, restore behavior, and refusing collisions rather than overwriting another skill.
+Provider fixtures exercise documented request/response shapes, independent verification, malformed answers, invalid probabilities, authentication failure, retries and request budgets. Routing covers no-match, abstention, confidence/fit gates, a 270-skill sharding case, explicit offline labeling and caching. Setup/migration checks cover preserved settings, dry-run/apply/restore and collision refusal.
 
-Validation found and fixed two concrete integration issues before packaging: a YAML description containing an unquoted colon, and a missing-config hook error that would otherwise have blocked the host turn. Regression tests cover both.
+Earlier validation also corrected a YAML description with an unquoted colon and a missing-config hook error. Regression tests cover both.
 
-## Not executed / not claimed
+## Not verified
 
-- **Live Jev authentication, model accuracy, Korean routing quality, inference latency, and actual billed token/cost savings.** No TypeSafe API key was available, and no live request was made.
-- **Real Codex, Claude Code, or Cursor installation/operation.** The integrations use their documented stdio/configuration formats, but local protocol fixtures do not replace checking a real host. Existing native skill exposure must be removed or disabled separately, then checked in a new session.
-- **Real macOS Keychain, Windows Credential Manager, Linux Secret Service, or a clean Windows/macOS installation.** Key handling is guarded in code and has no plaintext fallback; platform behavior remains to be verified.
-- **Remotion dependency installation, dependency-backed typecheck, and rendering.** The attempted npm installation failed with `EAI_AGAIN` resolving `registry.npmjs.org`. The editable source and a manual GitHub Actions rendering workflow are supplied. See [video/README.md](../video/README.md).
-- **New GitHub repository creation, remote push, release-asset upload, or GitHub Actions execution.** The connected GitHub actions did not expose new-repository creation. The local publishing helper was attempted but stopped because GitHub CLI was absent. No remote repository URL is presented as an existing deliverable. See [publishing instructions](PUBLISHING.md).
+- Live Jev authentication, semantic accuracy, Korean routing quality, inference latency or actual billed cost. No TypeSafe API key was available; no live request was made.
+- Real Codex, Claude Code or Cursor installation and use. Generated configuration and local subprocess tests do not establish real host compatibility. Disable or remove native skill exposure separately and start a new session.
+- Real macOS Keychain, Windows Credential Manager or Linux Secret Service behavior. Code has no plaintext key fallback, but OS credential-store integration needs live platform testing.
+- The 92.41% comparison for 200 skills measures only synthetic skill-related UTF-8 payload (58,004 versus 4,403 bytes), not total context, tokens, cost or speed. Small catalogs can have greater overhead.
 
-## Reproduce locally
-
-From the source root with Python 3.11+ and dependency-download access:
+## Reproduce
 
 ```bash
 python -m pip install -e '.[dev]'
 python -m pytest -q
 python scripts/benchmark_context.py
+python Install.py --offline
 ```
 
-For a local, keyless integration example, use `python Install.py --offline` and the executable path printed by installation. Offline mode is intentionally labeled lexical demonstration mode; it is not a substitute for validating Jev.
-
-For a real provider check, store your API key locally with `jev-skills auth` or provide `TYPESAFE_API_KEY` to the server process, switch the setup to live mode, then run `jev-skills doctor --live`. Optional labeled-case evaluation is provided by `scripts/evaluate_live.py`; it requires explicit `--allow-live` and can incur API charges. Never paste an API key into a public issue or commit.
+See [video instructions](../video/README.md) for rendering and [publishing](PUBLISHING.md) for release details. For live provider verification, configure a local key with `jev-skills auth` or server-side `TYPESAFE_API_KEY`, select live mode, then run `jev-skills doctor --live`. The optional evaluator requires `--allow-live` and incurs API usage. Never commit an API key.
 
 ## 한국어 요약
 
-로컬 테스트 71개, 실제 MCP 표준입출력, 훅 입출력, 별도 환경에 설치한 패키지의 CSV 예제 실행을 확인했습니다. 스킬 200개 비교의 92.41%는 합성 데이터의 스킬 관련 UTF-8 바이트 감소이며, 실제 모델 토큰·총비용·속도 개선율이 아닙니다. 작은 라이브러리는 오히려 부하가 늘 수 있습니다.
+로컬 테스트 72개와 Linux·macOS·Windows CI를 통과했습니다. 전용 설치 프로그램, MCP·훅 프로세스, 예제 실행을 확인했고 영어·한국어 Remotion 영상을 실제 렌더링해 각 5개 장면을 검토했습니다. 공개 저장소와 v0.1.0 릴리스에서 소스와 영상을 제공합니다.
 
-실제 Jev 호출, 각 하네스의 실제 실행, 운영체제 키체인, Remotion 렌더링, GitHub 저장소 생성·푸시·업로드는 검증 또는 완료하지 못했습니다. 제공 영상은 별도로 렌더링한 Pillow + FFmpeg 미리보기이며 화면에도 이를 표시합니다.
-
-## Work continuation — 2026-09-22
-
-This section supersedes the earlier build-environment limitations where stated.
-
-- Host: Linux, Python 3.12.14, Node.js 24.19.0.
-- Fresh virtual environment: `pip install ".[dev,secure]"` succeeded with registry-downloaded dependencies.
-- Test suite: **71 passed in 2.59 seconds**. MCP stdio and hook subprocess checks are included.
-- Guided installer: `Install.py --offline --non-interactive --client none --no-keychain` completed in a separate temporary application directory. It created a runtime, copied six bundled skills, wrote its launcher, and passed its non-live doctor check. No user host configuration or native skills were changed.
-- The synthetic benchmark reproduced all committed counts and hashes, including 58,004 versus 4,403 bytes for 200 skills.
-- Remotion: `npm install` and dependency-backed `npm run typecheck` succeeded. The new `video/package-lock.json` resolves packages from the public npm registry. Rendering failed before producing output because downloading Chrome Headless Shell returned `ERR_PROXY_TUNNEL`. Existing EN/KO preview MP4s remain the separate Pillow/FFmpeg outputs.
-- The manual video workflow now uses `npm ci` and installs a Korean-capable system font. The Python workflow also covers installer and example changes.
-- GitHub: the connector confirms the `himomohi` account and returned 404 for `himomohi/jev-skill-router`. The connector lacks repository creation. The browser's secure sign-in attempt returned an incorrect-credentials error; repository creation, push, release and Actions execution are still pending authenticated browser access.
-- TypeSafe API request/response definitions and the official skill-suggestion cookbook were rechecked. No live API key was present, so no paid Jev request or live-quality claim was made.
-
-한국어: Work에서 신규 의존성 설치, 전용 설치 프로그램, 테스트 71개, 실제 의존성을 사용한 TypeScript 검사까지 추가로 확인했습니다. 영상 렌더링은 브라우저 다운로드 연결 오류로 중단됐으며 GitHub 게시에는 웹 로그인 완료가 필요합니다.
+실제 Jev 인증·판단 품질, 사용자 하네스 실행, 운영체제 키체인은 아직 검증하지 않았습니다. 92.41%는 합성 데이터의 스킬 관련 바이트 감소이며 실제 비용·속도 개선율이 아닙니다.

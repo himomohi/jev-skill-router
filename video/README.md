@@ -6,7 +6,7 @@ Editable React/Remotion source: 30 seconds, 1280×720, 24 fps, English and Korea
 
 The supplied `docs/media/preview.en.mp4` and `preview.ko.mp4` were rendered by **Pillow + FFmpeg**, using the same five-scene storyboard and benchmark. Their persistent footer identifies them as local preview-renderer output. They are conceptual animations, not live Jev or host recordings.
 
-The **Remotion project has not yet been rendered**. In the Work continuation, npm ciation succeeded, a transitive dependency lockfile was generated, and `npm run typecheck` passed. Rendering stopped while downloading Chrome Headless Shell because the network proxy tunnel timed out. Actual Remotion layout/rendering remains unverified. Do not describe the preview files as successful Remotion renders.
+The **Remotion project rendered successfully** in [GitHub Actions run 35685682423](https://github.com/himomohi/jev-skill-router/actions/runs/35685682423) using the committed lockfile, dependency-backed TypeScript checking, and Noto Sans CJK. Download `overview.en.mp4` and `overview.ko.mp4` from [v0.1.0](https://github.com/himomohi/jev-skill-router/releases/tag/v0.1.0). Each video contains 720 frames at 1280×720 and 24 fps (30 seconds of video; container duration approximately 30.06 seconds). Both languages’ five scenes were visually inspected. These are conceptual animations, not live Jev or host recordings.
 
 ## Render with Remotion
 
@@ -28,7 +28,7 @@ npm run studio
 npx remotion render src/index.tsx OverviewKO out/overview.ko.mp4 --concurrency=2
 ```
 
-The GitHub Actions **Render Remotion videos (manual)** workflow installs, typechecks, renders both compositions and uploads workflow artifacts. It is not scheduled or automatically run on every push. No successful GitHub run is claimed in this bundle.
+The GitHub Actions **Render Remotion videos (manual)** workflow installs, typechecks, renders both compositions and uploads workflow artifacts. It is not scheduled or automatically run on every push. The successful run is linked above; its `remotion-overviews` artifact contains both MP4s.
 
 ## Reproduce the separate local previews
 
@@ -44,6 +44,6 @@ Run from the repository root. FFmpeg must be on PATH. Common installed fonts are
 
 ## 한국어 안내
 
-영어·한국어 30초 영상의 Remotion 소스를 포함합니다. 실제 제공한 MP4는 Pillow와 FFmpeg로 제작한 **별도 미리보기**이며, 화면 아래에도 이를 표시합니다. Work에서 의존성 설치와 TypeScript 검사는 통과했습니다. 렌더링은 Chrome Headless Shell 다운로드 중 네트워크 시간 초과로 중단되어, Remotion 렌더링 성공이나 실제 Jev 사용 녹화를 주장하지 않습니다.
+영어·한국어 30초 Remotion 영상과 편집 가능한 소스를 제공합니다. GitHub Actions에서 의존성 설치, TypeScript 검사, 두 언어 렌더링을 완료하고 각 5개 장면을 확인했습니다. [v0.1.0](https://github.com/himomohi/jev-skill-router/releases/tag/v0.1.0)의 `overview.en.mp4`, `overview.ko.mp4`가 실제 Remotion 출력입니다. 저장소의 `preview.*.mp4`는 별도 Pillow·FFmpeg 미리보기입니다. 두 영상 모두 설계 설명용이며 실제 Jev 사용 녹화가 아닙니다.
 
 `npm ci → npm run typecheck → npm run render`로 실제 Remotion 출력을 만들 수 있습니다. GitHub에는 수동 실행형 영상 워크플로를 제공합니다. 수치는 `docs/benchmark.json`을 읽으며, 바이트 감소를 토큰·비용·속도 개선으로 바꾸어 표시하지 않습니다.

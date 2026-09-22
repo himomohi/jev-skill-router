@@ -10,11 +10,11 @@ A small, local Python service reads your trusted `SKILL.md` library, asks [TypeS
 
 **Python 3.11+ · Claude Code / Codex / Cursor adapters · English + Korean docs · MIT**
 
-[![Context comparison: synthetic skill-related UTF-8 payload, not model tokens](docs/media/poster.en.png)](docs/media/preview.en.mp4)
+[![Context comparison: synthetic skill-related UTF-8 payload, not model tokens](docs/media/poster.en.png)](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.en.mp4)
 
-[English video preview](docs/media/preview.en.mp4) · [한국어 영상](docs/media/preview.ko.mp4) · [Remotion source and rendering](video/README.md)
+[English Remotion video](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.en.mp4) · [한국어 영상](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.ko.mp4) · [Remotion source and rendering](video/README.md)
 
-> **Verification boundary:** local tests and MCP subprocess integration pass. Live Jev authentication, semantic routing quality, and real desktop/CLI host integration have not been verified in this build environment. Included MP4s are locally rendered storyboard previews, **not Remotion-rendered recordings**. The editable Remotion project and manual render workflow are included. [Full evidence](docs/VALIDATION.md).
+> **Verified:** 72 tests pass locally and the Linux/macOS/Windows CI matrix passes. English and Korean Remotion compositions rendered successfully in GitHub Actions. Videos explain the design; they are not live product recordings. Live Jev authentication, semantic routing quality, and actual host integration remain unverified. [Full evidence](docs/VALIDATION.md).
 
 ## Why another layer?
 
@@ -26,7 +26,7 @@ This project moves the **selection inventory**, not merely the bodies, outside t
 
 ## Start with the bundled examples
 
-Extract this source bundle, install **Python 3.11+**, then run:
+Download and extract the source ZIP from [v0.1.0](https://github.com/himomohi/jev-skill-router/releases/tag/v0.1.0), install **Python 3.11+**, then run:
 
 ```bash
 python Install.py --offline
@@ -166,7 +166,7 @@ npm run typecheck
 npm run render
 ```
 
-The Remotion project includes a verified dependency lockfile. Use `npm ci` for reproducible installation; dependency-backed TypeScript checking passed in Work. See [video instructions](video/README.md) for renderer boundaries and the manual-only GitHub Actions render job.
+The Remotion project includes a verified dependency lockfile. Use `npm ci` for reproducible installation; dependency-backed TypeScript checking and both language renders passed in GitHub Actions. See [video instructions](video/README.md) for renderer boundaries and the manual-only GitHub Actions render job.
 
 To create a **new** repository and upload included MP4s as release assets, review the bundle, install Git + GitHub CLI, sign in with `gh auth login`, configure your Git author identity, then run:
 
@@ -174,6 +174,6 @@ To create a **new** repository and upload included MP4s as release assets, revie
 python scripts/publish_github.py --public --release
 ```
 
-It creates `<your-authenticated-login>/jev-skill-router`, commits the reviewed source, pushes it, and publishes a `v0.1.0` release. It refuses an existing repository or remote and never force-pushes. Repository creation/upload was not performed in this build environment. [Publishing details](docs/PUBLISHING.md).
+It creates `<your-authenticated-login>/jev-skill-router`, commits the reviewed source, pushes it, and publishes a `v0.1.0` release. It refuses an existing repository or remote and never force-pushes. This project is published at [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router); the helper is for creating a separate new repository. [Publishing details](docs/PUBLISHING.md).
 
 [Installation](docs/INSTALLATION.md) · [Architecture](docs/ARCHITECTURE.md) · [Validation](docs/VALIDATION.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)

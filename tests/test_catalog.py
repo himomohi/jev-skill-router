@@ -39,14 +39,18 @@ def test_hidden_collections_ignored(make_skill,tmp_path):
     make_skill(root=tmp_path/'skills'/'.system')
     assert not Catalog([str(tmp_path/'skills')]).skills
 
-def test_pagination_reassembles_exact_file(skill_root):
+@pytest.mark.parametrize('newline', ['\n', '\r\n'])
+def test_pagination_reassembles_exact_file(skill_root, newline):
+    source = next(skill_root.rglob('SKILL.md'))
+    expected = source.read_text(encoding='utf-8').replace('\n', newline)
+    source.write_bytes(expected.encode('utf-8'))
     cat=Catalog([str(skill_root)]);sid=next(iter(cat.skills))
     chunks=[];offset=0
     while True:
         result=cat.read(sid,offset=offset,limit=19);chunks.append(result['content'])
         offset=result['next_offset']
         if offset is None:break
-    assert ''.join(chunks)==cat.skills[sid].source.read_text()
+    assert ''.join(chunks)==expected
 
 def test_edit_changes_fingerprint(skill_root):
     cat=Catalog([str(skill_root)]);old=cat.fingerprint

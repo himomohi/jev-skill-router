@@ -1,6 +1,24 @@
-{"task":"Debug a Python traceback and fix the failing unit test.","expected":["python-debug"]}
-{"task":"Review this SQL join for duplicate rows before aggregation.","expected":["sql-review"]}
-{"task":"Profile this CSV file for missing values and duplicate rows.","expected":["csv-profile"]}
-{"task":"파이썬 오류 원인을 찾고 실패하는 테스트를 수정해줘.","expected":["python-debug"]}
-{"task":"CSV 파일의 결측치와 중복 행을 확인해줘.","expected":["csv-profile"]}
-{"task":"Write a short birthday greeting for a friend.","expected":[]}
+{"language":"en","task":"Debug a Python traceback and fix the failing unit test.","expected":["python-debug"]}
+{"language":"ko","task":"파이썬 오류 원인을 찾고 실패하는 테스트를 수정해줘.","expected":["python-debug"]}
+{"language":"en","task":"A Python function returns the wrong value. Reproduce the bug and add a regression test.","expected":["python-debug"]}
+{"language":"en","task":"Review this SQL join for duplicate rows before aggregation.","expected":["sql-review"]}
+{"language":"ko","task":"SQL 쿼리의 조인 때문에 매출 합계가 중복되는지 검토해줘.","expected":["sql-review"]}
+{"language":"ko","task":"SQL 쿼리에서 NULL 값이 COUNT 결과에 미치는 영향을 검토해줘.","expected":["sql-review"]}
+{"language":"en","task":"Profile this CSV file for missing values and duplicate rows.","expected":["csv-profile"]}
+{"language":"ko","task":"CSV 파일의 인코딩과 열 이름, 결측치, 중복 행을 확인해줘.","expected":["csv-profile"]}
+{"language":"en","task":"Inspect a local comma-separated export and count empty cells without modifying the data.","expected":["csv-profile"]}
+{"language":"en","task":"Review my Git diff for bugs, missing tests and accidentally committed secrets.","expected":["git-review"]}
+{"language":"ko","task":"커밋 전 Git 변경 내용을 리뷰하고 실수로 비밀값이 들어갔는지 확인해줘.","expected":["git-review"]}
+{"language":"ko","task":"저장소의 스테이징된 변경분과 주변 코드를 읽고 실제 버그가 될 부분을 찾아줘.","expected":["git-review"]}
+{"language":"en","task":"Write README installation instructions and runnable usage examples for this project.","expected":["document-writing"]}
+{"language":"ko","task":"처음 쓰는 사람을 위해 프로젝트 리드미의 설치와 사용 안내를 작성해줘.","expected":["document-writing"]}
+{"language":"ko","task":"기술 문서의 설치 전제조건과 예제 명령을 이해하기 쉽게 정리해줘.","expected":["document-writing"]}
+{"language":"en","task":"Create a 30-second React and Remotion explainer video and render an MP4.","expected":["remotion-video"]}
+{"language":"ko","task":"Remotion으로 기능 소개 영상을 만들고 MP4로 렌더링해줘.","expected":["remotion-video"]}
+{"language":"en","task":"Register a Remotion composition and animate its titles using the current frame.","expected":["remotion-video"]}
+{"language":"en","task":"Write a short birthday greeting for a friend.","expected":[]}
+{"language":"ko","task":"친구에게 보낼 짧은 생일 축하 인사말을 써줘.","expected":[]}
+{"language":"en","task":"What is the capital of France?","expected":[]}
+{"language":"ko","task":"오늘 저녁에 먹을 간단한 계란 요리를 추천해줘.","expected":[]}
+{"language":"en","task":"Suggest three names for a new kitten.","expected":[]}
+{"language":"ko","task":"고양이 이름 세 개만 추천해줘.","expected":[]}

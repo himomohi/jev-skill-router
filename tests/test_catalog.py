@@ -99,7 +99,7 @@ def test_unchanged_refresh_reuses_files_and_force_reloads(make_skill,tmp_path,sk
     assert len(skill_file_reads)==3
     skill_file_reads.clear()
     cat.refresh()
-    reused=0 if os.name=='nt' else 3
+    reused=3
     assert len(skill_file_reads)==3-reused
     assert cat.fingerprint==fingerprint
     assert cat.refresh_stats=={'files_seen':3,'files_reused':reused,'files_reloaded':3-reused}
@@ -118,8 +118,6 @@ def test_incremental_refresh_detects_additions_edits_and_deletions(make_skill,tm
     added=make_skill('added')
     cat.refresh()
     expected_reads={edited/'SKILL.md',added/'SKILL.md'}
-    if os.name=='nt':
-        expected_reads.add(tmp_path/'skills'/'unchanged'/'SKILL.md')
     assert set(skill_file_reads)==expected_reads
     assert {s.name for s in cat.skills.values()}=={'edited','unchanged','added'}
     assert next(s for s in cat.skills.values() if s.name=='edited').body=='New instructions'
@@ -220,3 +218,72 @@ def test_new_skill_still_enforces_limit_after_cache_hit(make_skill,tmp_path):
     make_skill('two')
     with pytest.raises(RouterError,match='max_catalog_skills'):
         cat.refresh()
+
+
+def test_reparse_ancestor_is_rejected(make_skill, monkeypatch):
+    from types import SimpleNamespace
+    directory=make_skill()
+    original=Path.lstat
+    def attributes(path, *args, **kwargs):
+        result=original(path,*args,**kwargs)
+        if path==directory:
+            return SimpleNamespace(st_mode=result.st_mode,st_file_attributes=0x400)
+        return result
+    monkeypatch.setattr(Path,'lstat',attributes)
+    with pytest.raises(RouterError,match='reparse'):
+        Catalog._no_symlinks(directory/'SKILL.md')
+    assert not Catalog([str(directory.parent)]).skills
+
+
+@pytest.mark.skipif(os.name!='nt',reason='Requires real Windows metadata API')
+def test_windows_native_change_time_and_fallback(make_skill,skill_file_reads,monkeypatch):
+    from jev_skill_router.windows_metadata import change_stamp
+    directory=make_skill();source=directory/'SKILL.md'
+    # Windows CI uses NTFS. Assert this path really exercises the native API,
+    # rather than silently accepting fallback-only coverage.
+    assert change_stamp(source) is not None
+    cat=Catalog([str(directory.parent)])
+    skill_file_reads.clear()
+    cat.refresh()
+    assert not skill_file_reads
+    monkeypatch.setattr('jev_skill_router.catalog.windows_change_stamp',lambda path:None)
+    cat.refresh();skill_file_reads.clear()
+    cat.refresh()
+    assert skill_file_reads==[source]
+    assert cat.refresh_stats['files_reused']==0
+
+
+@pytest.mark.skipif(os.name!='nt',reason='Requires Windows junction support')
+def test_windows_junctions_are_not_traversed(make_skill,tmp_path):
+    import subprocess
+    directory=make_skill();source=directory/'SKILL.md'
+    cat=Catalog([str(directory.parent)])
+    outside=make_skill('outside',root=tmp_path/'elsewhere')
+    source.unlink();directory.rmdir()
+    result=subprocess.run(['cmd','/c','mklink','/J',str(directory),str(outside)],
+                          capture_output=True,check=False)
+    if result.returncode:
+        pytest.skip('OS does not permit junction creation')
+    try:
+        cat.refresh()
+        assert not cat.skills
+        with pytest.raises(RouterError,match='reparse'):
+            Catalog._no_symlinks(directory/'SKILL.md')
+    finally:
+        directory.rmdir()  # Remove only the junction, not its target.
+
+
+@pytest.mark.parametrize('newline',['\n','\r\n'])
+@pytest.mark.parametrize('bom',[b'',b'\xef\xbb\xbf'])
+def test_evaluated_read_checks_full_text_digest(make_skill,newline,bom):
+    directory=make_skill(body='Before');source=directory/'SKILL.md'
+    raw=source.read_text(encoding='utf-8').replace('\n',newline).encode()
+    source.write_bytes(bom+raw)
+    cat=Catalog([str(directory.parent)]);skill=next(iter(cat.skills.values()))
+    # Digest checks the complete decoded file even when returning a small page.
+    result=cat.read(skill.id,limit=3,expected_digest=skill.digest)
+    assert result['content']==raw.decode()[:3]
+    source.write_bytes(bom+raw.replace(b'Before',b'After!'))
+    with pytest.raises(RouterError,match='changed after evaluation'):
+        cat.read(skill.id,limit=3,expected_digest=skill.digest)
+    assert cat.read(skill.id)['content'].endswith('After!')

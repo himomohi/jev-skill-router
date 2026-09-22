@@ -139,3 +139,101 @@ def test_error_preserves_actual_request_counts_and_never_caches(skill_root):
         assert router.last_metrics['unreported_requests']==1
         assert not router.cache
     finally:router.close()
+
+
+def test_only_shortlisted_bodies_are_sampled(make_skill,tmp_path,monkeypatch):
+    import jev_skill_router.router as routing
+    sampled=[]
+    original=routing.excerpt
+    def tracked(body,task,budget):
+        sampled.append(body)
+        return original(body,task,budget)
+    monkeypatch.setattr(routing,'excerpt',tracked)
+    for i in range(200):
+        make_skill(f'lazy-{i:03}',body='Long ASCII skill instructions. '*500)
+    provider=RecordedProvider()
+    def handle(request):
+        if 'rank' in json.loads(request.content)['questions']:
+            assert not sampled, 'Evidence must wait until ranking finishes'
+        return provider(request)
+    cfg=Config(roots=[str(tmp_path/'skills')],max_request_bytes=8000)
+    router=Router(cfg,JevClient(cfg,'fixture-key',httpx.MockTransport(handle)))
+    try:
+        result=router.route('Inspect operation instructions')
+        assert 0<len(sampled)==result['shortlisted']<200
+        assert all(len(encoded(request))<=cfg.max_request_bytes for request in provider.requests)
+    finally:router.close()
+
+
+@pytest.mark.parametrize('body',[
+    'plain ASCII'*200,
+    '\\"\t\r\n\b\f\x01\x1f'*200,
+    '가é😀'*800,
+    'ASCII'*300+'😀가é\\"\x01',
+    'short 가😀\\"\n',
+    '',
+])
+def test_cached_json_width_bounds_escape_and_unicode(body):
+    from jev_skill_router.evidence import excerpt,json_width_counts,excerpt_byte_bound
+    counts=json_width_counts(body)
+    assert sum(counts)==len(body)
+    assert sum((i+1)*n for i,n in enumerate(counts))==len(encoded(body))-2
+    for limit in (100,900,2000):
+        for task in ('ASCII','가é','absent'):
+            assert len(encoded(excerpt(body,task,limit)))-2<=excerpt_byte_bound(body,counts,limit)
+
+
+def test_small_ascii_catalog_still_fits_two_call_budget(make_skill,tmp_path):
+    for i in range(6):make_skill(f'small-{i}',body='Long ASCII instructions '*500)
+    cfg=Config(roots=[str(tmp_path/'skills')],max_api_calls=2,max_request_bytes=8000)
+    provider=RecordedProvider()
+    router=Router(cfg,JevClient(cfg,'fixture-key',httpx.MockTransport(provider)))
+    try:
+        result=router.route('Debug Python')
+        assert result['api_calls']==2
+        assert all(len(encoded(request))<=8000 for request in provider.requests)
+    finally:router.close()
+
+
+def test_oversized_possible_evidence_rejected_before_paid_call(make_skill,tmp_path,monkeypatch):
+    make_skill(body='😀'*3000)
+    provider=RecordedProvider()
+    cfg=Config(roots=[str(tmp_path/'skills')],excerpt_chars=2000,max_request_bytes=8000)
+    router=Router(cfg,JevClient(cfg,'fixture-key',httpx.MockTransport(provider)))
+    def forbidden(*args):raise AssertionError('Preflight must not sample evidence')
+    monkeypatch.setattr('jev_skill_router.router.excerpt',forbidden)
+    try:
+        with pytest.raises(RouterError,match='request budget'):router.route('Debug Python')
+        assert not provider.requests
+    finally:router.close()
+
+
+def test_changed_after_verification_is_never_loaded_or_cached(skill_root,provider):
+    source=skill_root/'python-debug'/'SKILL.md'
+    def handle(request):
+        result=provider(request)
+        if 'rank' not in json.loads(request.content)['questions']:
+            source.write_text(source.read_text()+'\nUnverified replacement instructions.',encoding='utf-8')
+        return result
+    cfg=Config(roots=[str(skill_root)])
+    router=Router(cfg,JevClient(cfg,'fixture-key',httpx.MockTransport(handle)))
+    try:
+        with pytest.raises(RouterError,match='changed'):router.route('Debug Python')
+        assert not router.cache
+    finally:router.close()
+
+
+def test_ranking_retry_consumes_shared_verification_budget(skill_root,provider):
+    attempts=[]
+    def handle(request):
+        attempts.append(request)
+        if len(attempts)==1:return httpx.Response(429)
+        return provider(request)
+    cfg=Config(roots=[str(skill_root)],max_api_calls=2,retries=1)
+    router=Router(cfg,JevClient(cfg,'fixture-key',httpx.MockTransport(handle),sleep=lambda _:None))
+    try:
+        with pytest.raises(RouterError,match='request budget exhausted'):router.route('Debug Python')
+        assert len(attempts)==2
+        assert all('rank' in json.loads(request.content)['questions'] for request in attempts)
+        assert router.last_metrics['http_requests']==2 and not router.cache
+    finally:router.close()

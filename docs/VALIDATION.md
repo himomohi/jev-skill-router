@@ -1,19 +1,25 @@
 # Validation record — 2026-09-22
 
-This records implementation checks, not production certification or live Jev quality. The current source includes improvements after the v0.1.0 release. Public repository: [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router).
+This records implementation checks, not production certification or live Jev quality. The current source is version 0.2.1. Public repository: [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router).
 
 ## Current source checks
 
-- **116 tests passed in 2.78 seconds**, Linux / Python 3.12.14. Provider responses remain fixtures, not real Jev answers.
-- Incremental catalog reuse covers new/deleted/edited files, restored modification times, same-path replacements, symlink changes, forced rehash, and changes during reads. Windows deliberately retains full reads.
+- **136 tests passed, 2 Windows-only tests skipped, in 2.96 seconds**, Linux / Python 3.12.14. Provider responses remain fixtures, not real Jev answers.
+- Incremental catalog reuse covers new/deleted/edited files, restored modification times, same-path replacements, symlink changes, forced rehash, and changes during reads. Windows uses NTFS/ReFS change metadata when available, with full-read fallback. Native API and junction integration require Windows CI.
+- Candidate-only extraction tests cover a 200-skill catalog, UTF-8/JSON request bounds and zero-spend preflight rejection. Selected-file mutation after evaluation is rejected before returning or caching its content.
+- Evaluation report schema 3 aligns cold/warm route-only timing and includes failed warm attempts; schema 2 reports cannot be compared.
 - Concurrent API tests verify the configured bound, preserved result order, cancellation of active/queued work on errors and deadlines, actual HTTP limits including retries, and unknown usage after failed attempts.
 - Long-body evidence tests confirm relevant late text and final constraints can be included within the existing character budget. This is coverage of the extraction algorithm, not proof of better model accuracy.
 - Evaluation tests verify no credential lookup in preflight, actual HTTP/retry counters, cold and immediate-repeat timing, error/no-match denominators, interrupted cases, report privacy, strict pricing conditions and comparable-run ingestion.
 - The evaluator preflight found **24 cases: 12 English, 12 Korean, six no-match**, over the six example skills, with **zero API calls and zero credential reads**.
-- [Local refresh measurement](runtime-benchmark.json): 200 synthetic files, five alternating runs per mode, Linux. Full-refresh median 140.927 ms; incremental median 15.169 ms; unchanged content reloads 200 → 0. This compares refresh modes of the current implementation, not live routing or total task speed.
+- [Local refresh measurement](runtime-benchmark.json): 200 synthetic files, five alternating runs per mode, Linux. Full-refresh median 147.313 ms; incremental median 21.975 ms; unchanged content reloads 200 → 0. This compares refresh modes of the current implementation, not live routing or total task speed.
 - The current context-accounting artifact includes new timing/request fields: 200 skills, 58,004 → 4,463 bytes (92.31%). Five skills increase the modeled payload by 17.58%.
 
 The historical CI below applies to its cited earlier commit. A new local pass does not establish that every platform has run the current source.
+
+## Historical v0.2.0 CI
+
+[CI run 35692027500](https://github.com/himomohi/jev-skill-router/actions/runs/35692027500) passed all four jobs: Ubuntu Python 3.11/3.13, Windows Python 3.12 and macOS Python 3.12. This predates the current changes. Current-commit results are available in the [test workflow](https://github.com/himomohi/jev-skill-router/actions/workflows/test.yml).
 
 ## Historical v0.1.0 checks
 
@@ -62,6 +68,6 @@ See [video instructions](../video/README.md) for rendering and [publishing](PUBL
 
 ## 한국어 요약
 
-현재 소스의 로컬 테스트 116개를 통과했습니다. 변경 없는 파일 재사용, 본문 여러 구간의 검증 근거, 동시 API 요청·시간 및 요청 한도, 실측 도구를 보완했습니다. 영어·한국어 24개 사례의 사전 점검은 키 조회와 API 호출 없이 통과했습니다. 위 Linux·macOS·Windows CI 기록은 명시된 이전 커밋의 결과입니다.
+현재 소스의 로컬 테스트 136개를 통과했고 Windows 전용 테스트 2개는 로컬에서 건너뛰었습니다. 변경 없는 파일 재사용, 본문 여러 구간의 검증 근거, 동시 API 요청·시간 및 요청 한도, 실측 도구를 보완했습니다. 영어·한국어 24개 사례의 사전 점검은 키 조회와 API 호출 없이 통과했습니다. 위 Linux·macOS·Windows CI 기록은 명시된 이전 커밋의 결과입니다.
 
 실제 Jev 인증·판단 품질, 사용자 하네스 실행, 운영체제 키체인은 아직 검증하지 않았습니다. 현재 92.31%는 합성 데이터의 스킬 관련 바이트 감소이며 실제 비용·속도 개선율이 아닙니다. 로컬 파일 처리 개선과 모델·전체 작업 성능은 구분해야 합니다.

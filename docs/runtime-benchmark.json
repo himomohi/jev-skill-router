@@ -7,37 +7,37 @@
   "runs_per_mode": 5,
   "model_calls": 0,
   "median_seconds": {
-    "full_refresh": 0.140927,
-    "incremental_refresh": 0.015169
+    "full_refresh": 0.147313,
+    "incremental_refresh": 0.021975
   },
   "samples": {
     "full_refresh": [
       {
-        "seconds": 0.132111,
+        "seconds": 0.139601,
         "files_seen": 200,
         "files_reused": 0,
         "files_reloaded": 200
       },
       {
-        "seconds": 0.135631,
+        "seconds": 0.147313,
         "files_seen": 200,
         "files_reused": 0,
         "files_reloaded": 200
       },
       {
-        "seconds": 0.140927,
+        "seconds": 0.154478,
         "files_seen": 200,
         "files_reused": 0,
         "files_reloaded": 200
       },
       {
-        "seconds": 0.159238,
+        "seconds": 0.120476,
         "files_seen": 200,
         "files_reused": 0,
         "files_reloaded": 200
       },
       {
-        "seconds": 0.176999,
+        "seconds": 0.151575,
         "files_seen": 200,
         "files_reused": 0,
         "files_reloaded": 200
@@ -45,31 +45,31 @@
     ],
     "incremental_refresh": [
       {
-        "seconds": 0.014053,
+        "seconds": 0.018058,
         "files_seen": 200,
         "files_reused": 200,
         "files_reloaded": 0
       },
       {
-        "seconds": 0.01512,
+        "seconds": 0.02253,
         "files_seen": 200,
         "files_reused": 200,
         "files_reloaded": 0
       },
       {
-        "seconds": 0.015789,
+        "seconds": 0.015137,
         "files_seen": 200,
         "files_reused": 200,
         "files_reloaded": 0
       },
       {
-        "seconds": 0.022279,
+        "seconds": 0.021975,
         "files_seen": 200,
         "files_reused": 200,
         "files_reloaded": 0
       },
       {
-        "seconds": 0.015169,
+        "seconds": 0.022242,
         "files_seen": 200,
         "files_reused": 200,
         "files_reloaded": 0
@@ -79,7 +79,7 @@
   "limitations": [
     "Directory traversal and file stat checks remain.",
     "OS caches and filesystem affect timing.",
-    "Windows conservatively uses full file reads.",
+    "Windows reuse requires native NTFS/ReFS change metadata; unsupported or failed queries use full reads. Inspect files_reused for actual behavior.",
     "Does not measure selection quality, network time, cost, or complete task success."
   ],
   "dataset": "synthetic"

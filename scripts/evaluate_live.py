@@ -24,7 +24,7 @@ from jev_skill_router.jev import JevClient, encoded
 from jev_skill_router.mcp import BOOTSTRAP, TOOL
 from jev_skill_router.router import Router
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 STATUSES = {"selected", "uncertain", "no_match", "empty_catalog", "error"}
 COUNTERS = ("api_calls", "http_requests", "retry_requests", "request_bytes",
             "input_tokens", "output_tokens", "unreported_requests")
@@ -111,6 +111,8 @@ def summarize(records: list[dict], planned: int, planned_by_language: dict | Non
         "uncertain": sum(row["status"] == "uncertain" for row in records),
         "cold_all_attempts": latency([row["seconds"] for row in records]),
         "cold_completed": latency([row["seconds"] for row in completed]),
+        "warm_all_attempts": latency([row["warm"]["seconds"] for row in records if "warm" in row]),
+        "warm_errors": sum(bool(row.get("warm", {}).get("error")) for row in records),
         "warm_cache": latency([row["warm"]["seconds"] for row in records if row.get("warm", {}).get("cache_hit")]),
     }
     groups = {}
@@ -255,11 +257,14 @@ def evaluate(config: Config, cases: list[dict], client: JevClient, *, max_reques
         for index, row in enumerate(cases):
             router.cache.clear()  # No duplicate dataset row can become a cold cache hit.
             before = client.metrics_snapshot()
-            started = time.perf_counter()
             record = {"case": index, "language": row["language"], "expected_count": len(row["expected"]),
                       "selected_count": 0, "correct": False}
             try:
-                result = router.route(row["task"], row["context"])
+                started = time.perf_counter()
+                try:
+                    result = router.route(row["task"], row["context"])
+                finally:
+                    record["seconds"] = round(time.perf_counter() - started, 6)
                 chosen = sorted(entry["name"] for entry in result["selected"])
                 record.update(status=result["status"], selected_count=len(chosen), correct=chosen == row["expected"],
                               cache_hit=result.get("cache_hit", False), content=content_bytes(router, row, result))
@@ -268,20 +273,22 @@ def evaluate(config: Config, cases: list[dict], client: JevClient, *, max_reques
                 record["status"] = "error"
                 interrupted = isinstance(error, KeyboardInterrupt)
                 record["error_category"] = "interrupted" if interrupted else error_category(error)
-            record["seconds"] = round(time.perf_counter() - started, 6)
             record.update(metric_delta(client.metrics_snapshot(), before))
             if record["status"] != "error":
                 before_warm = client.metrics_snapshot()
-                started = time.perf_counter()
                 try:
-                    warm = router.route(row["task"], row["context"])
-                    record["warm"] = {"seconds": round(time.perf_counter() - started, 6),
+                    started = time.perf_counter()
+                    try:
+                        warm = router.route(row["task"], row["context"])
+                    finally:
+                        warm_seconds = round(time.perf_counter() - started, 6)
+                    record["warm"] = {"seconds": warm_seconds,
                                       "cache_hit": warm.get("cache_hit", False),
                                       "same_selection": sorted(entry["name"] for entry in warm["selected"]) == chosen,
                                       **metric_delta(client.metrics_snapshot(), before_warm)}
                 except (RouterError, KeyboardInterrupt) as error:
                     interrupted = isinstance(error, KeyboardInterrupt)
-                    record["warm"] = {"seconds": round(time.perf_counter() - started, 6), "cache_hit": False,
+                    record["warm"] = {"seconds": warm_seconds, "cache_hit": False,
                                       "error": True, "error_category": "interrupted" if interrupted else error_category(error),
                                       **metric_delta(client.metrics_snapshot(), before_warm)}
             records.append(record)
@@ -315,7 +322,7 @@ def evaluate(config: Config, cases: list[dict], client: JevClient, *, max_reques
               "limits": [
                   "Bundled cases are authored starter checks over six example skills, not representative workload evidence.",
                   "Cold means decision cache cleared; the HTTP connection pool and filesystem cache remain warm after the first case.",
-                  "Warm latency is a fresh wall-clock measurement for an exact immediate repeat, including catalog checks and reading selected content.",
+                  "Cold and warm latency measure Router.route only, including its catalog checks, provider calls and selected-content reads; evaluator accounting is excluded, including on errors.",
                   "Accuracy includes errors among attempted cases; unattempted cases are reported separately. Early termination can bias results.",
                   "Context counts compare actual router serialization with a modeled progressive-disclosure inventory using the same selected content.",
                   "Bytes are not tokens or bills. Main-model selection, host framing, final task success and total completion time are not measured.",

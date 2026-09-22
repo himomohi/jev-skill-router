@@ -212,3 +212,58 @@ def test_paired_report_comparison_ignores_unpaired_cases_and_payload(tmp_path, s
     path.write_text(json.dumps(old), encoding="utf-8")
     with pytest.raises(RouterError):
         evaluation.compare_report(path, report)
+
+
+@pytest.mark.parametrize("fail_at", [None, 1, 2])
+def test_latency_scopes_exclude_accounting_even_on_failure(skill_root, provider, monkeypatch, fail_at):
+    from types import SimpleNamespace
+
+    clock = [0.0]
+    calls = []
+    real_route = evaluation.Router.route
+    real_content_bytes = evaluation.content_bytes
+    monkeypatch.setattr(evaluation, "time", SimpleNamespace(perf_counter=lambda: clock[0]))
+
+    def route(self, task, context=""):
+        calls.append(1)
+        clock[0] += 2.0
+        if len(calls) == fail_at:
+            raise RouterError("fixture failure")
+        return real_route(self, task, context)
+
+    def expensive_accounting(*args):
+        clock[0] += 100.0
+        return real_content_bytes(*args)
+
+    def expensive_error_classification(error):
+        clock[0] += 100.0
+        return "routing_error"
+
+    monkeypatch.setattr(evaluation.Router, "route", route)
+    monkeypatch.setattr(evaluation, "content_bytes", expensive_accounting)
+    monkeypatch.setattr(evaluation, "error_category", expensive_error_classification)
+    config = Config(roots=[str(skill_root)], retries=0)
+    report = evaluation.evaluate(config, cases()[:1], measured_client(config, provider), max_requests=64)
+    record = report["records"][0]
+    assert record["seconds"] == 2.0
+    assert report["summary"]["cold_all_attempts"]["p50_seconds"] == 2.0
+    if fail_at == 1:
+        assert "warm" not in record
+        assert report["summary"]["warm_all_attempts"]["samples"] == 0
+    else:
+        assert record["warm"]["seconds"] == 2.0
+        assert report["summary"]["warm_all_attempts"]["p50_seconds"] == 2.0
+        assert report["summary"]["warm_errors"] == (fail_at == 2)
+        assert report["summary"]["warm_cache"]["samples"] == (fail_at is None)
+
+
+def test_legacy_latency_report_rejected_before_credential_access(tmp_path, monkeypatch, capsys):
+    # Identical input identities cannot make the old timing scope comparable.
+    assert evaluation.main(["--preflight"]) == 0
+    previous = json.loads(capsys.readouterr().out)
+    previous.update(schema_version=2, live=True, records=[])
+    path = tmp_path / "legacy.json"
+    path.write_text(json.dumps(previous), encoding="utf-8")
+    monkeypatch.setattr(evaluation, "api_key", lambda: pytest.fail("Legacy comparison read credentials"))
+    assert evaluation.main(["--allow-live", "--compare-report", str(path)]) == 2
+    assert "sensitive details are not printed" in capsys.readouterr().err

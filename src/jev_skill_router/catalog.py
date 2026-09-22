@@ -3,17 +3,18 @@ import hashlib
 import json
 import os
 import stat
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path, PureWindowsPath
 import yaml
 from .config import RouterError
+from .evidence import json_width_counts
+from .windows_metadata import change_stamp as windows_change_stamp
 
 MAX_FILE_BYTES=512_000
 TEXT_SUFFIXES={".md",".txt",".py",".js",".mjs",".cjs",".ts",".tsx",".jsx",".json",".yaml",".yml",".toml",".sh",".ps1",".html",".css",".csv",".sql",".r",".rs",".go",".swift"}
 BLOCKED_NAMES={"credentials.json","secrets.json","secrets.yaml","id_rsa","id_ed25519","token.json"}
-# Windows stat ctime can be a creation time, not a metadata-change time.
-# Conservatively re-read there so restored mtimes cannot hide in-place edits.
-STAT_CACHE_SUPPORTED=os.name!='nt'
+# Windows needs native change time; st_ctime there can be creation time.
+STAT_CACHE_SUPPORTED=True
 
 @dataclass(frozen=True)
 class Skill:
@@ -24,6 +25,9 @@ class Skill:
     source: Path
     body: str
     digest: str
+    body_json_width_counts: tuple[int,...] = field(init=False,repr=False)
+    def __post_init__(self) -> None:
+        object.__setattr__(self,'body_json_width_counts',json_width_counts(self.body))
     def metadata(self) -> dict:
         return {"id":self.id,"name":self.name,"description":self.description}
 
@@ -38,9 +42,20 @@ class Catalog:
         self.refresh()
 
     @staticmethod
+    def _is_redirect(path: Path) -> bool:
+        try:
+            info=path.lstat()
+        except FileNotFoundError:
+            return False
+        except OSError:
+            return True  # An uninspectable path cannot be considered safe.
+        return stat.S_ISLNK(info.st_mode) or bool(
+            getattr(info,'st_file_attributes',0) & 0x400)
+
+    @staticmethod
     def _no_symlinks(path: Path) -> None:
-        if any(p.is_symlink() for p in (path, *path.parents)):
-            raise RouterError("Symbolic links are not accepted in skill paths")
+        if any(Catalog._is_redirect(p) for p in (path, *path.parents)):
+            raise RouterError("Symbolic links and reparse points are not accepted in skill paths")
 
     @staticmethod
     def _text(path: Path) -> str:
@@ -64,8 +79,11 @@ class Catalog:
         info=path.stat(follow_symlinks=False)
         if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_FILE_BYTES:
             raise RouterError("Skill file is missing or exceeds 512 KB")
+        native=windows_change_stamp(path) if os.name=='nt' else (info.st_ctime_ns,)
+        # A zero final component marks an unsupported metadata query. Such
+        # entries may be parsed but must never be reused on the next refresh.
         return (info.st_dev,info.st_ino,info.st_mode,info.st_size,
-                info.st_mtime_ns,info.st_ctime_ns)
+                info.st_mtime_ns,*(native or ()),int(native is not None))
 
     def refresh(self, *, force: bool = False) -> None:
         """Rescan paths and reuse unchanged parsed files, without a TTL.
@@ -73,8 +91,8 @@ class Catalog:
         Identity, size, mode and nanosecond modification/change timestamps are
         checked on each scan. ``force=True`` re-reads and hashes every file for
         filesystems whose metadata cannot reliably expose content changes. The
-        optimization is disabled on Windows, where stat ctime may be creation
-        time. This is not protection against hostile metadata spoofing. The read
+        Windows optimization uses native change time on NTFS/ReFS; unavailable
+        queries fall back to full reads. This is not protection against hostile metadata spoofing. The read
         tool always reads the current file, independently of this cache.
         """
         skills={};warnings=[];seen=set();file_cache={}
@@ -83,11 +101,11 @@ class Catalog:
             try:
                 self._no_symlinks(root)
                 if not root.is_dir(): raise RouterError("root is not a directory")
-            except RouterError as e:
+            except (RouterError,OSError) as e:
                 warnings.append(f"{root}: {e}");continue
             for current,dirs,files in os.walk(root,followlinks=False):
                 here=Path(current)
-                dirs[:]=sorted(d for d in dirs if not d.startswith('.') and d not in {'node_modules','__pycache__','venv'} and not (here/d).is_symlink())
+                dirs[:]=sorted(d for d in dirs if not d.startswith('.') and d not in {'node_modules','__pycache__','venv'} and not self._is_redirect(here/d))
                 if 'SKILL.md' not in files: continue
                 file=here/'SKILL.md'
                 if file.absolute() in seen: continue
@@ -97,7 +115,7 @@ class Catalog:
                     stamp=self._file_stamp(file)
                     cached=self._file_cache.get(file.absolute())
                     # An absent inode cannot reliably identify replacements.
-                    if STAT_CACHE_SUPPORTED and not force and stamp[1] and cached and cached[0]==stamp:
+                    if STAT_CACHE_SUPPORTED and not force and stamp[1] and stamp[-1] and cached and cached[0]==stamp:
                         skill=cached[1]
                         skills[skill.id]=skill
                         file_cache[file.absolute()]=cached
@@ -132,7 +150,7 @@ class Catalog:
         self.refresh_stats=stats
         self.fingerprint=hashlib.sha256(json.dumps([(s.id,s.digest) for s in self.skills.values()]).encode()).hexdigest()
 
-    def read(self, skill_id: str, path: str = 'SKILL.md', offset: int = 0, limit: int = 12000) -> dict:
+    def read(self, skill_id: str, path: str = 'SKILL.md', offset: int = 0, limit: int = 12000, *, expected_digest: str | None = None) -> dict:
         skill=self.skills.get(skill_id)
         if not skill: raise RouterError("Unknown skill ID. Route a task to obtain an ID.")
         if type(offset) is not int or offset<0 or type(limit) is not int or not 1<=limit<=50000:
@@ -149,6 +167,8 @@ class Catalog:
         if not target.resolve().is_relative_to(skill.directory.resolve()):
             raise RouterError("Path escapes the skill directory")
         text=self._text(target)
+        if expected_digest is not None and hashlib.sha256(text.encode()).hexdigest()!=expected_digest:
+            raise RouterError("Skill file changed after evaluation; retry routing")
         if offset>len(text): raise RouterError("Offset is beyond the end of the file")
         end=min(len(text),offset+limit)
         return {"skill_id":skill.id,"name":skill.name,"path":path,"content":text[offset:end],"offset":offset,"next_offset":end if end<len(text) else None,"total_chars":len(text),"base_directory":str(skill.directory)}

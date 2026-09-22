@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 — 2026-09-22
+
+- Generate task-specific excerpts only for shortlisted skills. Cached character-width bounds reserve safe verification request sizes before API spending.
+- Reuse unchanged Windows NTFS/ReFS files using native change time; fall back to full reads when unavailable and reject reparse-point paths.
+- Reject selected files changed during model evaluation before returning content or caching the decision.
+- Align cold/warm evaluation timers and report failed warm attempts. Report schema 3 intentionally rejects comparisons with schema 2.
+- Pin CI actions to verified releases and run credential-free evaluator preflight on every platform.
+
 ## 0.2.0 — 2026-09-22
 
 - Reuse unchanged catalog files on Linux/macOS; re-read changed files and invalidate routing decisions. Windows retains full reads, and `refresh(force=True)` forces a complete refresh.

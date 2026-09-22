@@ -144,7 +144,7 @@ The router does **not** execute scripts, install arbitrary packages, modify appl
 
 ## Convenience without hidden behavior
 
-One external library can serve several local harnesses. Catalog files are parsed locally; only selected instructions are returned to the main model. Linux/macOS reuse unchanged parsed files, while Windows conservatively rereads them. A persistent MCP process reuses its HTTP pool and exact-request cache. Separate CLI invocations and Claude hook processes do **not** share that cache.
+One external library can serve several local harnesses. Catalog files are parsed locally; only selected instructions are returned to the main model. Linux/macOS reuse unchanged parsed files; Windows uses native NTFS/ReFS change timestamps and falls back to full reads when unavailable. A persistent MCP process reuses its HTTP pool and exact-request cache. Separate CLI invocations and Claude hook processes do **not** share that cache.
 
 Configuration is local JSON, keys stay out of that JSON, and the provider endpoint is fixed to TypeSafe HTTPS. Live requests disclose focused task text, skill descriptions, and shortlisted excerpts to TypeSafe. Do not register confidential material without permission. [Security](SECURITY.md).
 

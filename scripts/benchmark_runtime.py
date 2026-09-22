@@ -32,7 +32,7 @@ def measure(roots, runs):
         'runs_per_mode':runs, 'model_calls':0,
         'median_seconds':{name:statistics.median(row['seconds'] for row in rows) for name,rows in results.items()},
         'samples':results,
-        'limitations':['Directory traversal and file stat checks remain.', 'OS caches and filesystem affect timing.', 'Windows conservatively uses full file reads.', 'Does not measure selection quality, network time, cost, or complete task success.'],
+        'limitations':['Directory traversal and file stat checks remain.', 'OS caches and filesystem affect timing.', 'Windows reuse requires native NTFS/ReFS change metadata; unsupported or failed queries use full reads. Inspect files_reused for actual behavior.', 'Does not measure selection quality, network time, cost, or complete task success.'],
     }
 
 

@@ -20,7 +20,7 @@ Reads are bounded UTF-8 text from known skill directories. Absolute paths, paren
 
 This is not a hardened filesystem sandbox: a malicious local process able to change paths concurrently may race checks, hard links are not a separate isolation boundary, and allowed text files may contain sensitive content under innocuous names. Do not make untrusted shared directories available to this process. Discovery can read multiple large files, so cap root scope for large/hostile collections.
 
-On Linux/macOS, unchanged parsed catalog entries may be reused after identity, size and timestamp checks. A filesystem that preserves/spoofs all observed metadata can defeat this optimization's change detection; use `Catalog.refresh(force=True)` where metadata is unreliable. Windows conservatively rereads files. Selected content is always read again and path-checked.
+On Linux/macOS, unchanged parsed catalog entries may be reused after identity, size and timestamp checks. A filesystem that preserves/spoofs all observed metadata can defeat this optimization's change detection; use `Catalog.refresh(force=True)` where metadata is unreliable. Windows uses native NTFS/ReFS change timestamps, falling back to full reads when unavailable. Symlinks and Windows reparse points are rejected. Selected content is reread, path-checked and matched against the evaluated digest before it is returned or the decision is cached; a mismatch requires routing again.
 
 ## Model decisions do not grant permission
 

@@ -10,6 +10,8 @@ A small, local Python service reads your trusted `SKILL.md` library, asks [TypeS
 
 **Python 3.11+ · Claude Code / Codex / Cursor adapters · English + Korean docs · MIT**
 
+**0.3.0 update:** [What's changed and how to upgrade](docs/updates/v0.3.0.md) · [Changelog](CHANGELOG.md)
+
 [![Context comparison: synthetic skill-related UTF-8 payload, not model tokens](docs/media/poster.en.png)](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.en.mp4)
 
 [English overview](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.en.mp4) · [한국어 영상](https://github.com/himomohi/jev-skill-router/releases/download/v0.1.0/overview.ko.mp4)

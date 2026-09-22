@@ -1,6 +1,10 @@
 # Changelog
 
+[English](CHANGELOG.md) | [한국어](CHANGELOG.ko.md)
+
 ## 0.3.0 — 2026-09-22
+
+[Update notes and upgrade instructions](docs/updates/v0.3.0.md) · [한국어 업데이트 안내](docs/updates/v0.3.0.ko.md)
 
 - Add `jev-skills plan TASK [--context TEXT]`: inspect fresh-route request bounds, retry headroom and blocking limits without reading credentials or calling Jev. Live routing uses the same preflight before credential lookup.
 - Return `content_digest` on every file read. **Pagination change:** MCP/CLI continuation with an offset greater than zero now requires that digest as `expected_digest` / `--expected-digest`; changed files fail before returning mixed pages. Start at offset zero or reroute to obtain a new revision.

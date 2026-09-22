@@ -2,6 +2,8 @@
 
 The public repository is [himomohi/jev-skill-router](https://github.com/himomohi/jev-skill-router). [v0.1.0](https://github.com/himomohi/jev-skill-router/releases/tag/v0.1.0) provides the source ZIP and English/Korean Remotion MP4s. Updates are committed directly to `main`.
 
+Version 0.3.0 source-update materials: [English notes and upgrade guide](updates/v0.3.0.md), [한국어 업데이트 안내](updates/v0.3.0.ko.md), [English changelog](../CHANGELOG.md), [한국어 변경 이력](../CHANGELOG.ko.md). These documents describe the source update; a GitHub release or PyPI upload is a separate publication step.
+
 To publish a separate new repository, the included create-only helper uses your own authorized GitHub CLI. It needs Git, `gh`, a successful `gh auth login`, network access, and your configured Git `user.name`/`user.email`.
 
 Review the source, documentation and media, then from the extracted root:
